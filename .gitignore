@@ -1,0 +1,13 @@
+# Local env files
+.env
+.env.local
+node_modules/
+dist/
+.env
+.env.local
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.zip
+.vercel/
