@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const db = require('../config/database');
 
 /**
  * Initialise Socket.io : chaque utilisateur authentifié rejoint une room
@@ -11,6 +12,10 @@ function initSockets(io) {
     if (!token) return next(new Error('Authentification requise.'));
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
+      const user = db.prepare('SELECT id, status_compte FROM users WHERE id = ?').get(payload.sub);
+      if (!user || user.status_compte !== 'active') {
+        return next(new Error('Compte indisponible.'));
+      }
       socket.userId = payload.sub;
       next();
     } catch {

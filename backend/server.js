@@ -16,18 +16,18 @@ const io = new Server(socketServer, {
 });
 
 initSockets(io);
-app.set('io', io); // accessible depuis les contrÃ´leurs via req.app.get('io')
+app.set('io', io); // accessible depuis les contrôleurs via req.app.get('io')
 
 startCronJobs(io);
 
 apiServer.listen(PORT, () => {
-  console.log(`âœ… NeoBank API dÃ©marrÃ©e sur http://localhost:${PORT}`);
+  console.log(`NeoBank API démarrée sur http://localhost:${PORT}`);
 });
 
 if (socketServer !== apiServer) {
   socketServer.listen(SOCKET_PORT, () => {
-    console.log(`ðŸ”Œ WebSocket temps rÃ©el actif sur http://localhost:${SOCKET_PORT}`);
+    console.log(`WebSocket temps réel actif sur http://localhost:${SOCKET_PORT}`);
   });
 } else {
-  console.log(`ðŸ”Œ WebSocket temps rÃ©el actif sur http://localhost:${PORT}`);
+  console.log(`WebSocket temps réel actif sur http://localhost:${PORT}`);
 }

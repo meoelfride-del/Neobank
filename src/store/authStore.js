@@ -2,8 +2,17 @@ import { create } from 'zustand';
 import api from '../services/api';
 import { connectSocket, disconnectSocket } from '../services/socket';
 
-const useAuthStore = create((set, get) => ({
-  user: JSON.parse(localStorage.getItem('neobank_user') || 'null'),
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem('neobank_user') || 'null');
+  } catch {
+    localStorage.removeItem('neobank_user');
+    return null;
+  }
+}
+
+const useAuthStore = create((set) => ({
+  user: getStoredUser(),
   isAuthenticated: !!localStorage.getItem('neobank_access_token'),
   loading: false,
   error: null,
@@ -69,5 +78,10 @@ const useAuthStore = create((set, get) => ({
     set({ error: null, mfaRequired: false });
   },
 }));
+
+window.addEventListener('neobank:session-expired', () => {
+  disconnectSocket();
+  useAuthStore.setState({ user: null, isAuthenticated: false, error: 'Votre session a expiré.' });
+});
 
 export default useAuthStore;

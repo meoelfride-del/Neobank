@@ -2,10 +2,15 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const ALGO = 'aes-256-gcm';
-const KEY = Buffer.from(
-  process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd',
-  'hex'
-);
+const configuredKey = process.env.ENCRYPTION_KEY;
+
+if (process.env.NODE_ENV === 'production' && !configuredKey) {
+  throw new Error('ENCRYPTION_KEY est obligatoire en production.');
+}
+
+const KEY = configuredKey && /^[a-f0-9]{64}$/i.test(configuredKey)
+  ? Buffer.from(configuredKey, 'hex')
+  : crypto.createHash('sha256').update(configuredKey || 'neobank-local-development-key').digest();
 
 /**
  * Chiffre une chaîne (ex: numéro de carte) avec AES-256-GCM.

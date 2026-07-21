@@ -122,6 +122,9 @@ function refresh(req, res) {
     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.sub);
     if (!user) return res.status(401).json({ error: 'Utilisateur introuvable.' });
+    if (user.status_compte === 'suspended') {
+      return res.status(403).json({ error: 'Compte suspendu. Contactez le support.' });
+    }
     const accessToken = signAccessToken(user);
     res.json({ accessToken });
   } catch (err) {
