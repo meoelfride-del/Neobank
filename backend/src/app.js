@@ -26,7 +26,11 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { er
 app.use(globalLimiter);
 
 // --- Routes --------------------------------------------------------------
-app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/api/health', (req, res) => res.json({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  version: process.env.RENDER_GIT_COMMIT || process.env.APP_VERSION || 'local',
+}));
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/accounts', accountRoutes);

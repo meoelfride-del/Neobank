@@ -7,7 +7,7 @@ services:
     rootDir: backend
     buildCommand: npm ci
     startCommand: npm start
-    initialDeployHook: npm run bootstrap:admin
+    preDeployCommand: npm run bootstrap:admin
     healthCheckPath: /api/health
     disk:
       name: neobank-data
@@ -27,8 +27,8 @@ services:
       - key: ENCRYPTION_KEY
         generateValue: true
       - key: ADMIN_EMAIL
-        sync: false
+        value: admin@neobank.app
       - key: ADMIN_PASSWORD
-        sync: false
+        generateValue: true
       - key: ADMIN_PHONE
         value: +22900000000

@@ -88,9 +88,11 @@ export default function Login() {
           </p>
         </form>
 
-        <p className="text-center text-xs text-slate-250/30 mt-6">
-          Démo : client@neobank.demo / Client123! · admin@neobank.demo / Admin123!
-        </p>
+        {import.meta.env.DEV && (
+          <p className="text-center text-xs text-slate-250/30 mt-6">
+            Démo : client@neobank.demo / Client123! · admin@neobank.demo / Admin123!
+          </p>
+        )}
       </div>
     </div>
   );
