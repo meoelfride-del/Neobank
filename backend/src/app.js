@@ -26,6 +26,19 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { er
 app.use(globalLimiter);
 
 // --- Routes --------------------------------------------------------------
+app.get('/', (req, res) => res.json({
+  service: 'NeoBank API',
+  status: 'online',
+  health: '/api/health',
+  version: process.env.RENDER_GIT_COMMIT || process.env.APP_VERSION || 'local',
+}));
+
+app.get('/api', (req, res) => res.json({
+  service: 'NeoBank API',
+  status: 'online',
+  health: '/api/health',
+}));
+
 app.get('/api/health', (req, res) => res.json({
   status: 'ok',
   timestamp: new Date().toISOString(),

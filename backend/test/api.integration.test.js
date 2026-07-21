@@ -98,6 +98,11 @@ after(async () => {
 });
 
 test('health check et protection des routes', async () => {
+  const rootResponse = await fetch(`http://127.0.0.1:${PORT}/`);
+  const root = await rootResponse.json();
+  assert.equal(rootResponse.status, 200);
+  assert.equal(root.status, 'online');
+
   const health = await request('/health');
   assert.equal(health.status, 200);
   assert.equal(health.body.status, 'ok');
