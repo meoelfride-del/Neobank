@@ -67,6 +67,16 @@ test('health check et protection des routes', async () => {
   });
   assert.equal(corsResponse.status, 204);
   assert.equal(corsResponse.headers.get('access-control-allow-origin'), 'https://neobank-team-eig.vercel.app');
+
+  const customDomainCorsResponse = await fetch(`${BASE_URL}/health`, {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://www.neo-finance.app',
+      'Access-Control-Request-Method': 'GET',
+    },
+  });
+  assert.equal(customDomainCorsResponse.status, 204);
+  assert.equal(customDomainCorsResponse.headers.get('access-control-allow-origin'), 'https://www.neo-finance.app');
 });
 
 test('connexion client et lecture du profil', async () => {

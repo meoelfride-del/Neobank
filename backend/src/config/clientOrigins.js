@@ -1,6 +1,8 @@
 const DEFAULT_ORIGINS = [
   'http://localhost:5173',
   'https://neobank-team-eig.vercel.app',
+  'https://neo-finance.app',
+  'https://www.neo-finance.app',
 ];
 
 function normalizeOrigin(value) {
