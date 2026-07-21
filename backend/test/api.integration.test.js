@@ -57,6 +57,16 @@ test('health check et protection des routes', async () => {
 
   const protectedRoute = await request('/accounts');
   assert.equal(protectedRoute.status, 401);
+
+  const corsResponse = await fetch(`${BASE_URL}/health`, {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://neobank-team-eig.vercel.app',
+      'Access-Control-Request-Method': 'GET',
+    },
+  });
+  assert.equal(corsResponse.status, 204);
+  assert.equal(corsResponse.headers.get('access-control-allow-origin'), 'https://neobank-team-eig.vercel.app');
 });
 
 test('connexion client et lecture du profil', async () => {

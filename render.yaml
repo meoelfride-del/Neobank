@@ -25,7 +25,7 @@ services:
           name: neobank-db
           property: connectionString
       - key: CLIENT_URL
-        value: https://neobank.vercel.app
+        value: https://neobank-team-eig.vercel.app
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET

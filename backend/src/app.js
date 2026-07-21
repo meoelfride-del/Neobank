@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 const db = require('./config/database');
+const { getClientOrigins } = require('./config/clientOrigins');
 
 const authRoutes = require('./routes/authRoutes');
 const accountRoutes = require('./routes/accountRoutes');
@@ -19,7 +20,7 @@ const app = express();
 
 // --- Sécurité de base -------------------------------------------------
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: getClientOrigins(), credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 
 // Limitation de débit globale, plus stricte sur l'authentification
