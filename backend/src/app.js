@@ -53,6 +53,18 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+app.post('/api/monitoring/client-error', (req, res) => {
+  const report = {
+    name: String(req.body?.name || 'Error').slice(0, 80),
+    message: String(req.body?.message || 'Erreur inconnue').slice(0, 500),
+    componentStack: String(req.body?.componentStack || '').slice(0, 2000),
+    path: String(req.body?.path || '').slice(0, 300),
+    timestamp: new Date().toISOString(),
+  };
+  console.error('[client-error]', JSON.stringify(report));
+  res.status(202).json({ accepted: true });
+});
+
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/transactions', transactionRoutes);

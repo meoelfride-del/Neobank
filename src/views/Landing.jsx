@@ -280,7 +280,7 @@ export default function Landing() {
       <footer className="px-5 py-12">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 border-t border-black/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
           <div><div className="flex items-center gap-2 font-display font-bold"><Landmark size={18} /> NeoBank</div><p className="mt-2 text-sm text-ink-950/45">Votre argent, en temps réel.</p></div>
-          <div className="flex flex-wrap gap-5 text-sm text-ink-950/50"><a href="#produits">Produits</a><a href="#securite">Sécurité</a><a href="#faq">Aide</a><Link to="/login">Connexion</Link></div>
+          <div className="flex flex-wrap gap-5 text-sm text-ink-950/50"><a href="#produits">Produits</a><a href="#securite">Sécurité</a><a href="#faq">Aide</a><Link to="/mentions-legales">Mentions légales</Link><Link to="/confidentialite">Confidentialité</Link><Link to="/conditions-utilisation">Conditions</Link><Link to="/login">Connexion</Link></div>
           <p className="text-xs text-ink-950/35">© {new Date().getFullYear()} NeoBank. Démonstration.</p>
         </div>
       </footer>

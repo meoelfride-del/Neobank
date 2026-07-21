@@ -77,6 +77,13 @@ test('health check et protection des routes', async () => {
   });
   assert.equal(customDomainCorsResponse.status, 204);
   assert.equal(customDomainCorsResponse.headers.get('access-control-allow-origin'), 'https://www.neo-finance.app');
+
+  const monitoring = await request('/monitoring/client-error', {
+    method: 'POST',
+    body: { name: 'TestError', message: 'Rapport synthétique', path: '/test' },
+  });
+  assert.equal(monitoring.status, 202);
+  assert.equal(monitoring.body.accepted, true);
 });
 
 test('connexion client et lecture du profil', async () => {

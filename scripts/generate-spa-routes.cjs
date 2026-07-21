@@ -14,6 +14,9 @@ const routes = [
   'budget',
   'chatbot',
   'admin',
+  'mentions-legales',
+  'confidentialite',
+  'conditions-utilisation',
 ];
 
 if (!fs.existsSync(entryFile)) {

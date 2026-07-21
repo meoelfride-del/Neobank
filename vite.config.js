@@ -6,6 +6,7 @@ import path from 'node:path'
 const spaRoutes = [
   'login', 'register', 'onboarding', 'dashboard', 'accounts',
   'transfer', 'cards', 'budget', 'chatbot', 'admin',
+  'mentions-legales', 'confidentialite', 'conditions-utilisation',
 ]
 
 function spaRouteEntries() {

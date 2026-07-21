@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /accounts
+Disallow: /transfer
+Disallow: /cards
+Disallow: /budget
+Disallow: /chatbot
+Disallow: /admin
+Disallow: /onboarding
+
+Sitemap: https://www.neo-finance.app/sitemap.xml

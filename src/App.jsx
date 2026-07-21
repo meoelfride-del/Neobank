@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/AppLayout';
 
@@ -15,6 +17,7 @@ const Budget = lazy(() => import('./views/Budget'));
 const Chatbot = lazy(() => import('./views/Chatbot'));
 const AdminBackoffice = lazy(() => import('./views/AdminBackoffice'));
 const NotFound = lazy(() => import('./views/NotFound'));
+const Legal = lazy(() => import('./views/Legal'));
 
 function RouteLoader() {
   return (
@@ -43,6 +46,9 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/mentions-legales" element={<Legal type="mentions" />} />
+          <Route path="/confidentialite" element={<Legal type="privacy" />} />
+          <Route path="/conditions-utilisation" element={<Legal type="terms" />} />
           <Route path="/onboarding" element={<ProtectedRoute><OnboardingKYC /></ProtectedRoute>} />
 
           <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
@@ -56,6 +62,8 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <Analytics beforeSend={(event) => /\/(dashboard|accounts|transfer|cards|budget|chatbot|admin|onboarding)(\/|$)/.test(new URL(event.url, window.location.origin).pathname) ? null : event} />
+      <SpeedInsights />
     </BrowserRouter>
   );
 }
