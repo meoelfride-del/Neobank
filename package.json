@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:all": "node scripts/dev-all.cjs",
     "dev:all:force": "node scripts/dev-all.cjs --force",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-spa-routes.cjs",
     "preview": "vite preview"
   },
   "dependencies": {
