@@ -3,30 +3,30 @@ const db = require('../config/database');
 const { generateIban } = require('../services/cryptoService');
 const kycService = require('../services/kycService');
 
-function listAccounts(req, res) {
-  const accounts = db.prepare('SELECT * FROM accounts WHERE user_id = ? ORDER BY created_at ASC').all(req.user.id);
+async function listAccounts(req, res) {
+  const accounts = await db.prepare('SELECT * FROM accounts WHERE user_id = ? ORDER BY created_at ASC').all(req.user.id);
   res.json({ accounts });
 }
 
-function createAccount(req, res, next) {
+async function createAccount(req, res, next) {
   try {
     const { type, currency, label } = req.body;
     const id = uuid();
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO accounts (id, user_id, type, currency, balance, iban, label)
       VALUES (?, ?, ?, ?, 0, ?, ?)
     `).run(id, req.user.id, type, currency, generateIban(), label);
 
-    const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
+    const account = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
     res.status(201).json({ account });
   } catch (err) {
     next(err);
   }
 }
 
-function getAccount(req, res) {
+async function getAccount(req, res) {
   const { accountId } = req.params;
-  const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
+  const account = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
   if (!account) {
     return res.status(404).json({ error: 'Compte introuvable.' });
   }
@@ -37,13 +37,13 @@ function getAccount(req, res) {
   res.json({ account });
 }
 
-function submitKyc(req, res) {
-  const result = kycService.submitKyc(req.user.id);
+async function submitKyc(req, res) {
+  const result = await kycService.submitKyc(req.user.id);
   res.json(result);
 }
 
-function kycStatus(req, res) {
-  const user = db.prepare('SELECT status_kyc FROM users WHERE id = ?').get(req.user.id);
+async function kycStatus(req, res) {
+  const user = await db.prepare('SELECT status_kyc FROM users WHERE id = ?').get(req.user.id);
   res.json({ status_kyc: user.status_kyc });
 }
 

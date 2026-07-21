@@ -26,28 +26,28 @@ async function register(req, res, next) {
   try {
     const { nom, prenom, email, password, phone } = req.body;
 
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
     if (existing) return res.status(409).json({ error: 'Un compte existe déjà avec cet email.' });
 
     const passwordHash = await bcrypt.hash(password, 12);
     const mfaSecret = authenticator.generateSecret();
     const userId = uuid();
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO users (id, nom, prenom, email, password_hash, phone, multi_factor_secret)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(userId, nom, prenom, email, passwordHash, phone, mfaSecret);
 
     // Création automatique d'un compte Courant par défaut (multi-comptes possible ensuite)
     const accountId = uuid();
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO accounts (id, user_id, type, currency, balance, iban, label)
       VALUES (?, ?, 'Courant', 'EUR', 0, ?, 'Compte Courant')
     `).run(accountId, userId, generateIban());
 
     const otpAuthUrl = authenticator.keyuri(email, process.env.OTP_ISSUER || 'NeoBank', mfaSecret);
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user);
 
@@ -65,7 +65,7 @@ async function register(req, res, next) {
 async function login(req, res, next) {
   try {
     const { email, password, otp } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
     if (!user) return res.status(401).json({ error: 'Identifiants invalides.' });
 
     const valid = await bcrypt.compare(password, user.password_hash);
@@ -98,11 +98,11 @@ async function login(req, res, next) {
 
 async function enableMfa(req, res, next) {
   try {
-    const user = db.prepare('SELECT id, email, multi_factor_secret, mfa_enabled FROM users WHERE id = ?').get(req.user.id);
+    const user = await db.prepare('SELECT id, email, multi_factor_secret, mfa_enabled FROM users WHERE id = ?').get(req.user.id);
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
 
     const secret = user.multi_factor_secret || authenticator.generateSecret();
-    db.prepare('UPDATE users SET mfa_enabled = 1, multi_factor_secret = COALESCE(multi_factor_secret, ?) WHERE id = ?')
+    await db.prepare('UPDATE users SET mfa_enabled = TRUE, multi_factor_secret = COALESCE(multi_factor_secret, ?) WHERE id = ?')
       .run(secret, req.user.id);
 
     const otpAuthUrl = authenticator.keyuri(user.email, process.env.OTP_ISSUER || 'NeoBank', secret);
@@ -115,12 +115,12 @@ async function enableMfa(req, res, next) {
   }
 }
 
-function refresh(req, res) {
+async function refresh(req, res) {
   const { refreshToken } = req.body;
   if (!refreshToken) return res.status(400).json({ error: 'Refresh token manquant.' });
   try {
     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.sub);
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(payload.sub);
     if (!user) return res.status(401).json({ error: 'Utilisateur introuvable.' });
     if (user.status_compte === 'suspended') {
       return res.status(403).json({ error: 'Compte suspendu. Contactez le support.' });
@@ -132,8 +132,8 @@ function refresh(req, res) {
   }
 }
 
-function me(req, res) {
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+async function me(req, res) {
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   res.json({ user: sanitize(user) });
 }
 

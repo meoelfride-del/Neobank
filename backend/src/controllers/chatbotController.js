@@ -2,27 +2,27 @@ const { v4: uuid } = require('uuid');
 const db = require('../config/database');
 const { getBotReply } = require('../services/chatbotService');
 
-function history(req, res) {
-  const messages = db.prepare(`
+async function history(req, res) {
+  const messages = await db.prepare(`
     SELECT * FROM chat_messages WHERE user_id = ? ORDER BY timestamp ASC LIMIT 100
   `).all(req.user.id);
   res.json({ messages });
 }
 
-function sendMessage(req, res) {
+async function sendMessage(req, res) {
   const { content } = req.body;
   const userMsgId = uuid();
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO chat_messages (id, user_id, sender, content) VALUES (?, ?, 'user', ?)
   `).run(userMsgId, req.user.id, content);
 
   const { reply, escalated } = getBotReply(content);
   const botMsgId = uuid();
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO chat_messages (id, user_id, sender, content, escalated) VALUES (?, ?, 'bot', ?, ?)
-  `).run(botMsgId, req.user.id, reply, escalated ? 1 : 0);
+  `).run(botMsgId, req.user.id, reply, escalated);
 
   const io = req.app.get('io');
   if (io) io.to(`user:${req.user.id}`).emit('chat:message', { sender: 'bot', content: reply, escalated });

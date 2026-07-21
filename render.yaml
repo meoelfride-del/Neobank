@@ -1,3 +1,11 @@
+databases:
+  - name: neobank-db
+    plan: basic-256mb
+    region: ohio
+    databaseName: neobank
+    user: neobank_app
+    ipAllowList: []
+
 services:
   - type: web
     name: neobank-api-meoelfride
@@ -9,15 +17,13 @@ services:
     startCommand: npm start
     preDeployCommand: npm run bootstrap:admin
     healthCheckPath: /api/health
-    disk:
-      name: neobank-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_PATH
-        value: /var/data/neobank.sqlite
+      - key: DATABASE_URL
+        fromDatabase:
+          name: neobank-db
+          property: connectionString
       - key: CLIENT_URL
         value: https://neobank.vercel.app
       - key: JWT_SECRET

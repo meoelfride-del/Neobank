@@ -1,36 +1,27 @@
 const { after, before, test } = require('node:test');
 const assert = require('node:assert/strict');
-const { execFileSync, spawn } = require('node:child_process');
 const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
-const { once } = require('node:events');
 const { authenticator } = require('otplib');
 
 const PORT = 4199;
 const BASE_URL = `http://127.0.0.1:${PORT}/api`;
-const TEST_DATA_DIR = path.join(__dirname, '.tmp');
-const DB_PATH = path.join(TEST_DATA_DIR, `neobank-integration-${process.pid}.sqlite`);
-const testEnv = {
-  ...process.env,
-  NODE_ENV: 'test',
-  PORT: String(PORT),
-  SOCKET_PORT: String(PORT),
-  CLIENT_URL: 'http://localhost:5173',
-  DB_PATH,
-  JWT_SECRET: crypto.randomBytes(32).toString('hex'),
-  JWT_REFRESH_SECRET: crypto.randomBytes(32).toString('hex'),
-  ENCRYPTION_KEY: crypto.randomBytes(32).toString('hex'),
-};
-delete testEnv.NODE_TEST_CONTEXT;
+process.env.NODE_ENV = 'test';
+process.env.PORT = String(PORT);
+process.env.SOCKET_PORT = String(PORT);
+process.env.CLIENT_URL = 'http://localhost:5173';
+process.env.DATABASE_URL = 'pg-mem://';
+process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+process.env.JWT_REFRESH_SECRET = crypto.randomBytes(32).toString('hex');
+process.env.ENCRYPTION_KEY = crypto.randomBytes(32).toString('hex');
+
+const { seed } = require('../src/config/seed');
+const { startServer } = require('../server');
 
 let server;
 let clientToken;
 let adminToken;
 let sourceAccount;
 let recipient;
-let serverError = '';
-let serverOutput = '';
 
 async function request(route, { token, method = 'GET', body } = {}) {
   const response = await fetch(`${BASE_URL}${route}`, {
@@ -45,56 +36,13 @@ async function request(route, { token, method = 'GET', body } = {}) {
   return { status: response.status, body: payload };
 }
 
-async function waitForServer() {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    if (server?.exitCode !== null) {
-      throw new Error(`Le serveur de test s'est arrêté : ${serverError || `code ${server.exitCode}`}`);
-    }
-    try {
-      const response = await fetch(`${BASE_URL}/health`);
-      if (response.ok) return;
-    } catch {
-      // The process is still starting.
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  throw new Error(`Le serveur de test ne répond pas. Sortie: ${serverOutput} ${serverError}`);
-}
-
 before(async () => {
-  fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
-  execFileSync(process.execPath, ['src/config/seed.js'], {
-    cwd: path.resolve(__dirname, '..'),
-    env: testEnv,
-    stdio: 'pipe',
-  });
-
-  server = spawn(process.execPath, ['server.js'], {
-    cwd: path.resolve(__dirname, '..'),
-    env: testEnv,
-    stdio: 'pipe',
-    windowsHide: true,
-  });
-  server.stderr.on('data', (chunk) => {
-    serverError += chunk.toString();
-  });
-  server.stdout.on('data', (chunk) => {
-    serverOutput += chunk.toString();
-  });
-  server.on('error', (error) => {
-    serverError += error.stack || error.message;
-  });
-  await waitForServer();
+  await seed();
+  server = await startServer();
 });
 
 after(async () => {
-  if (server && server.exitCode === null) {
-    server.kill();
-    await Promise.race([once(server, 'exit'), new Promise((resolve) => setTimeout(resolve, 2000))]);
-  }
-  for (const suffix of ['', '-shm', '-wal']) {
-    fs.rmSync(`${DB_PATH}${suffix}`, { force: true });
-  }
+  if (server) await server.close();
 });
 
 test('health check et protection des routes', async () => {

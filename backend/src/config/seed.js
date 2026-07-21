@@ -6,34 +6,35 @@ const db = require('./database');
 const { generateIban } = require('../services/cryptoService');
 
 async function seed() {
-  const existingAdmin = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@neobank.demo');
+  await db.initDatabase();
+  const existingAdmin = await db.prepare('SELECT id FROM users WHERE email = ?').get('admin@neobank.demo');
 
   if (!existingAdmin) {
     const passwordHash = await bcrypt.hash('Admin123!', 12);
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO users (id, nom, prenom, email, password_hash, phone, role, status_kyc, status_compte)
       VALUES (?, 'Admin', 'NeoBank', 'admin@neobank.demo', ?, '+33600000000', 'admin', 'verified', 'active')
     `).run(uuid(), passwordHash);
     console.log('✔ Admin créé : admin@neobank.demo / Admin123!');
   }
 
-  const existingClient = db.prepare('SELECT id FROM users WHERE email = ?').get('client@neobank.demo');
+  const existingClient = await db.prepare('SELECT id FROM users WHERE email = ?').get('client@neobank.demo');
   if (!existingClient) {
     const passwordHash = await bcrypt.hash('Client123!', 12);
     const userId = uuid();
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO users (id, nom, prenom, email, password_hash, phone, role, status_kyc, status_compte)
       VALUES (?, 'Dupont', 'Alice', 'client@neobank.demo', ?, '+33612345678', 'client', 'verified', 'active')
     `).run(userId, passwordHash);
 
     const accountId = uuid();
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO accounts (id, user_id, type, currency, balance, iban, label)
       VALUES (?, ?, 'Courant', 'EUR', 2450.75, ?, 'Compte Courant')
     `).run(accountId, userId, generateIban());
 
     const savingsId = uuid();
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO accounts (id, user_id, type, currency, balance, iban, label)
       VALUES (?, ?, 'Epargne', 'EUR', 8300.00, ?, 'Livret Épargne')
     `).run(savingsId, userId, generateIban());
@@ -47,7 +48,7 @@ async function seed() {
     ];
     const { categorize } = require('../services/budgetService');
     for (const [libelle, amount, type] of demoTx) {
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO transactions (id, source_account_id, destination_info, amount, type, category, status, libelle)
         VALUES (?, ?, '', ?, ?, ?, 'completed', ?)
       `).run(uuid(), accountId, amount, type, categorize(libelle), libelle);
@@ -59,4 +60,13 @@ async function seed() {
   console.log('Seed terminé.');
 }
 
-seed();
+if (require.main === module) {
+  seed()
+    .catch((error) => {
+      console.error(error);
+      process.exitCode = 1;
+    })
+    .finally(() => db.close());
+}
+
+module.exports = { seed };

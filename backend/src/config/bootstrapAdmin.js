@@ -11,10 +11,11 @@ async function bootstrapAdmin() {
     throw new Error('ADMIN_EMAIL et ADMIN_PASSWORD (12 caractères minimum) sont obligatoires.');
   }
 
-  const existing = db.prepare('SELECT id, role FROM users WHERE email = ?').get(email);
+  await db.initDatabase();
+  const existing = await db.prepare('SELECT id, role FROM users WHERE email = ?').get(email);
   if (existing) {
     if (existing.role !== 'admin') {
-      db.prepare("UPDATE users SET role = 'admin', status_compte = 'active', status_kyc = 'verified' WHERE id = ?")
+      await db.prepare("UPDATE users SET role = 'admin', status_compte = 'active', status_kyc = 'verified' WHERE id = ?")
         .run(existing.id);
     }
     console.log(`Compte administrateur prêt : ${email}`);
@@ -22,7 +23,7 @@ async function bootstrapAdmin() {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO users (id, nom, prenom, email, password_hash, phone, role, status_kyc, status_compte)
     VALUES (?, 'Administrateur', 'NeoBank', ?, ?, ?, 'admin', 'verified', 'active')
   `).run(uuid(), email, passwordHash, process.env.ADMIN_PHONE || '+22900000000');
@@ -30,7 +31,13 @@ async function bootstrapAdmin() {
   console.log(`Compte administrateur créé : ${email}`);
 }
 
-bootstrapAdmin().catch((error) => {
-  console.error(error.message);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  bootstrapAdmin()
+    .catch((error) => {
+      console.error(error.message);
+      process.exitCode = 1;
+    })
+    .finally(() => db.close());
+}
+
+module.exports = { bootstrapAdmin };

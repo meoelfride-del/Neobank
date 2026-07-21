@@ -8,22 +8,22 @@ function maskCard(card) {
   return { ...safe, display: `•••• •••• •••• ${card.last4}` };
 }
 
-function listCards(req, res) {
+async function listCards(req, res) {
   const accountId = req.params.accountId;
-  const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
+  const account = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
   if (!account) return res.status(404).json({ error: 'Compte introuvable.' });
   if (account.user_id !== req.user.id && req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Ce compte ne vous appartient pas.' });
   }
 
-  const cards = db.prepare('SELECT * FROM cards WHERE account_id = ?').all(accountId);
+  const cards = await db.prepare('SELECT * FROM cards WHERE account_id = ?').all(accountId);
   res.json({ cards: cards.map(maskCard) });
 }
 
 async function createCard(req, res, next) {
   try {
     const { account_id, type, limits, pin } = req.body;
-    const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(account_id);
+    const account = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(account_id);
     if (!account || account.user_id !== req.user.id) {
       return res.status(403).json({ error: 'Ce compte ne vous appartient pas.' });
     }
@@ -39,23 +39,23 @@ async function createCard(req, res, next) {
     const expiry = `${String(expiryDate.getMonth() + 1).padStart(2, '0')}/${expiryDate.getFullYear()}`;
 
     const id = uuid();
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO cards (id, account_id, type, number_encrypted, last4, pin_hash, expiry, limits, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active')
     `).run(id, account_id, type, encrypt(cardNumber), last4, pinHash, expiry, limits || (type === 'Virtuelle' ? 500 : 3000));
 
-    const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(id);
+    const card = await db.prepare('SELECT * FROM cards WHERE id = ?').get(id);
     res.status(201).json({ card: { ...maskCard(card), fullNumber: type === 'Virtuelle' ? cardNumber : undefined } });
   } catch (err) {
     next(err);
   }
 }
 
-function toggleCard(req, res) {
+async function toggleCard(req, res) {
   const { cardId } = req.params;
   const { status } = req.body;
 
-  const card = db.prepare(`
+  const card = await db.prepare(`
     SELECT cards.*, accounts.user_id FROM cards
     JOIN accounts ON cards.account_id = accounts.id
     WHERE cards.id = ?
@@ -64,7 +64,7 @@ function toggleCard(req, res) {
   if (!card) return res.status(404).json({ error: 'Carte introuvable.' });
   if (card.user_id !== req.user.id) return res.status(403).json({ error: 'Cette carte ne vous appartient pas.' });
 
-  db.prepare('UPDATE cards SET status = ? WHERE id = ?').run(status, cardId);
+  await db.prepare('UPDATE cards SET status = ? WHERE id = ?').run(status, cardId);
   res.json({ message: `Carte ${status === 'Blocked' ? 'bloquée' : 'activée'} avec succès.` });
 }
 
@@ -73,11 +73,11 @@ async function revealSecrets(req, res) {
   const { cardId } = req.params;
   const { password } = req.body;
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   const valid = await bcrypt.compare(password || '', user.password_hash);
   if (!valid) return res.status(401).json({ error: 'Mot de passe incorrect.' });
 
-  const card = db.prepare(`
+  const card = await db.prepare(`
     SELECT cards.*, accounts.user_id FROM cards
     JOIN accounts ON cards.account_id = accounts.id
     WHERE cards.id = ?

@@ -1,8 +1,10 @@
+require('express-async-errors');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+const db = require('./config/database');
 
 const authRoutes = require('./routes/authRoutes');
 const accountRoutes = require('./routes/accountRoutes');
@@ -29,6 +31,7 @@ app.use(globalLimiter);
 app.get('/', (req, res) => res.json({
   service: 'NeoBank API',
   status: 'online',
+  database: 'PostgreSQL',
   health: '/api/health',
   version: process.env.RENDER_GIT_COMMIT || process.env.APP_VERSION || 'local',
 }));
@@ -39,11 +42,15 @@ app.get('/api', (req, res) => res.json({
   health: '/api/health',
 }));
 
-app.get('/api/health', (req, res) => res.json({
-  status: 'ok',
-  timestamp: new Date().toISOString(),
-  version: process.env.RENDER_GIT_COMMIT || process.env.APP_VERSION || 'local',
-}));
+app.get('/api/health', async (req, res) => {
+  await db.pool.query('SELECT 1');
+  res.json({
+    status: 'ok',
+    database: 'postgresql',
+    timestamp: new Date().toISOString(),
+    version: process.env.RENDER_GIT_COMMIT || process.env.APP_VERSION || 'local',
+  });
+});
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/accounts', accountRoutes);

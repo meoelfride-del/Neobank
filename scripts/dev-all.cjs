@@ -4,10 +4,10 @@ const path = require('path');
 
 const nodeCommand = process.execPath;
 const frontendDir = path.resolve(__dirname, '..');
-const backendDir = path.resolve(frontendDir, '..', 'backend');
+const backendDir = path.resolve(frontendDir, 'backend');
 const viteEntry = path.resolve(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js');
 const forceMode = process.argv.includes('--force');
-const managedPorts = [3000, 3001, 5173];
+const managedPorts = [4000, 3001, 5173];
 
 let backendProcess = null;
 let frontendProcess = null;
@@ -190,7 +190,7 @@ process.on('SIGTERM', () => shutdown(0));
     await waitForPortsClosed(managedPorts);
   }
 
-  const backendRunning = await isPortOpen(3000);
+  const backendRunning = await isPortOpen(4000);
   const frontendRunning = await isPortOpen(5173);
 
   console.log(
