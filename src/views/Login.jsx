@@ -17,13 +17,13 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
+        <Link to="/" aria-label="Retour à l’accueil" className="flex flex-col items-center mb-8 group">
           <div className="w-12 h-12 rounded-2xl bg-mint-500 flex items-center justify-center mb-3">
             <Landmark size={24} className="text-ink-950" strokeWidth={2.5} />
           </div>
-          <h1 className="text-2xl font-display font-semibold text-white">NeoBank</h1>
+          <h1 className="text-2xl font-display font-semibold text-white group-hover:text-mint-400 transition-colors">NeoBank</h1>
           <p className="text-sm text-slate-250/50 mt-1">Votre argent, en temps réel.</p>
-        </div>
+        </Link>
 
         <form onSubmit={handleSubmit} className="panel p-7 space-y-4">
           <h2 className="text-lg font-display font-semibold text-white mb-1">Connexion</h2>

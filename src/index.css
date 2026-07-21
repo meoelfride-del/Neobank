@@ -15,6 +15,17 @@
   *:focus-visible { outline: 2px solid #3CF0C5; outline-offset: 2px; border-radius: 4px; }
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .landing-float { animation: landing-float 6s ease-in-out infinite; }
+}
+
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-12px) rotate(1deg); }
+}
+
+.text-balance { text-wrap: balance; }
+
 @layer components {
   .panel {
     @apply bg-ink-800/80 border border-white/5 rounded-2xl shadow-card backdrop-blur-sm;

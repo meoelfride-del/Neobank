@@ -1,9 +1,10 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/AppLayout';
 
 const Login = lazy(() => import('./views/Login'));
+const Landing = lazy(() => import('./views/Landing'));
 const Register = lazy(() => import('./views/Register'));
 const OnboardingKYC = lazy(() => import('./views/OnboardingKYC'));
 const Dashboard = lazy(() => import('./views/Dashboard'));
@@ -39,7 +40,7 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<RouteLoader />}>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/onboarding" element={<ProtectedRoute><OnboardingKYC /></ProtectedRoute>} />

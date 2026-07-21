@@ -22,13 +22,13 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
+        <Link to="/" aria-label="Retour à l’accueil" className="flex flex-col items-center mb-8 group">
           <div className="w-12 h-12 rounded-2xl bg-mint-500 flex items-center justify-center mb-3">
             <Landmark size={24} className="text-ink-950" strokeWidth={2.5} />
           </div>
-          <h1 className="text-2xl font-display font-semibold text-white">Ouvrir un compte</h1>
+          <h1 className="text-2xl font-display font-semibold text-white group-hover:text-mint-400 transition-colors">Ouvrir un compte</h1>
           <p className="text-sm text-slate-250/50 mt-1">Gratuit, en moins de 3 minutes.</p>
-        </div>
+        </Link>
 
         <form onSubmit={handleSubmit} className="panel p-7 space-y-4">
           {error && (
