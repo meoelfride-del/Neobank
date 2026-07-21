@@ -2,10 +2,10 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const ALGO = 'aes-256-gcm';
-const configuredKey = process.env.ENCRYPTION_KEY;
+const configuredKey = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
 
 if (process.env.NODE_ENV === 'production' && !configuredKey) {
-  throw new Error('ENCRYPTION_KEY est obligatoire en production.');
+  throw new Error('ENCRYPTION_KEY ou JWT_SECRET est obligatoire en production.');
 }
 
 const KEY = configuredKey && /^[a-f0-9]{64}$/i.test(configuredKey)
