@@ -13,8 +13,12 @@ process.env.DATABASE_URL = 'pg-mem://';
 process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
 process.env.JWT_REFRESH_SECRET = crypto.randomBytes(32).toString('hex');
 process.env.ENCRYPTION_KEY = crypto.randomBytes(32).toString('hex');
+process.env.ADMIN_EMAIL = 'admin@neobank.app';
+process.env.ADMIN_PASSWORD = 'ProductionAdmin123!';
+process.env.ADMIN_PHONE = '+22900000000';
 
 const { seed } = require('../src/config/seed');
+const { bootstrapAdmin } = require('../src/config/bootstrapAdmin');
 const { startServer } = require('../server');
 
 let server;
@@ -38,6 +42,7 @@ async function request(route, { token, method = 'GET', body } = {}) {
 
 before(async () => {
   await seed();
+  await bootstrapAdmin();
   server = await startServer();
 });
 
@@ -112,6 +117,17 @@ test('connexion client et lecture du profil', async () => {
   assert.equal(me.status, 200);
   assert.equal(me.body.user.email, 'client@neobank.demo');
   assert.equal(me.body.user.password_hash, undefined);
+});
+
+test('bootstrap et connexion de l’administrateur de production', async () => {
+  const login = await request('/auth/login', {
+    method: 'POST',
+    body: { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD },
+  });
+  assert.equal(login.status, 200);
+  assert.equal(login.body.user.email, process.env.ADMIN_EMAIL);
+  assert.equal(login.body.user.role, 'admin');
+  assert.equal(login.body.user.status_compte, 'active');
 });
 
 test('comptes et contrôle de propriété', async () => {

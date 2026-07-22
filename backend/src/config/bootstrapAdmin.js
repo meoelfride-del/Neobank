@@ -13,16 +13,18 @@ async function bootstrapAdmin() {
 
   await db.initDatabase();
   const existing = await db.prepare('SELECT id, role FROM users WHERE email = ?').get(email);
+  const passwordHash = await bcrypt.hash(password, 12);
+
   if (existing) {
-    if (existing.role !== 'admin') {
-      await db.prepare("UPDATE users SET role = 'admin', status_compte = 'active', status_kyc = 'verified' WHERE id = ?")
-        .run(existing.id);
-    }
-    console.log(`Compte administrateur prêt : ${email}`);
+    await db.prepare(`
+      UPDATE users
+      SET password_hash = ?, role = 'admin', status_compte = 'active', status_kyc = 'verified'
+      WHERE id = ?
+    `).run(passwordHash, existing.id);
+    console.log(`Compte administrateur synchronisé : ${email}`);
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
   await db.prepare(`
     INSERT INTO users (id, nom, prenom, email, password_hash, phone, role, status_kyc, status_compte)
     VALUES (?, 'Administrateur', 'NeoBank', ?, ?, ?, 'admin', 'verified', 'active')
