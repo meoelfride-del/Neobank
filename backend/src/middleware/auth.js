@@ -33,6 +33,15 @@ function requireRole(...roles) {
   };
 }
 
+function requireVerifiedKyc(req, res, next) {
+  if (req.user?.role === 'admin' || req.user?.status_kyc === 'verified') return next();
+  return res.status(403).json({
+    error: 'La vérification KYC est obligatoire avant d’utiliser les services bancaires.',
+    code: 'KYC_REQUIRED',
+    status_kyc: req.user?.status_kyc || 'pending',
+  });
+}
+
 /** Vérifie que le compte demandé appartient bien à l'utilisateur authentifié. */
 async function ownsAccount(req, res, next) {
   const accountId = req.params.accountId || req.body.accountId || req.body.account_id || req.body.source_account_id;
@@ -47,4 +56,4 @@ async function ownsAccount(req, res, next) {
   next();
 }
 
-module.exports = { authenticate, requireRole, ownsAccount };
+module.exports = { authenticate, requireRole, requireVerifiedKyc, ownsAccount };

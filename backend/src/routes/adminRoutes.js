@@ -5,6 +5,7 @@ const { validate, schemas } = require('../middleware/validate');
 
 router.use(authenticate, requireRole('admin'));
 router.get('/users', ctrl.listUsers);
+router.get('/users/:userId/detail', ctrl.getUserDetail);
 router.get('/stats', ctrl.getStats);
 router.post('/kyc/:userId', validate(schemas.adminKycDecision), ctrl.validateKyc);
 router.patch('/users/:userId', validate(schemas.adminUpdateUser), ctrl.updateUser);

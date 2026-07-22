@@ -49,7 +49,7 @@ export default function App() {
           <Route path="/mentions-legales" element={<Legal type="mentions" />} />
           <Route path="/confidentialite" element={<Legal type="privacy" />} />
           <Route path="/conditions-utilisation" element={<Legal type="terms" />} />
-          <Route path="/onboarding" element={<ProtectedRoute><OnboardingKYC /></ProtectedRoute>} />
+          <Route path="/onboarding" element={<ProtectedRoute allowUnverified><OnboardingKYC /></ProtectedRoute>} />
 
           <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
           <Route path="/accounts" element={<Protected><Accounts /></Protected>} />

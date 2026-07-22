@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/transactionController');
-const { authenticate, ownsAccount } = require('../middleware/auth');
+const { authenticate, requireVerifiedKyc, ownsAccount } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
 
-router.use(authenticate);
+router.use(authenticate, requireVerifiedKyc);
 router.get('/account/:accountId', ownsAccount, ctrl.listTransactions);
 router.post('/transfer', validate(schemas.transfer), ctrl.transfer);
 router.post('/:txId/cancel', ctrl.cancelTransfer);

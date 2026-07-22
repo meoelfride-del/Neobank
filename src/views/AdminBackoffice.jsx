@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Users, ShieldAlert, Ban, AlertTriangle, Check, X, Landmark, Pencil, WalletCards, KeyRound, Bell } from 'lucide-react';
+import { Users, ShieldAlert, Ban, AlertTriangle, Check, X, Landmark, Pencil, WalletCards, KeyRound, Bell, Eye } from 'lucide-react';
 import api from '../services/api';
 import { getSocket } from '../services/socket';
+import TransactionRow from '../components/TransactionRow';
 
 export default function AdminBackoffice() {
   const [stats, setStats] = useState(null);
@@ -14,6 +15,8 @@ export default function AdminBackoffice() {
   const [feedback, setFeedback] = useState(null);
   const [otpTransaction, setOtpTransaction] = useState(null);
   const [notifyUser, setNotifyUser] = useState(null);
+  const [clientDetail, setClientDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -67,6 +70,19 @@ export default function AdminBackoffice() {
       setFundUser(user);
     } catch (error) {
       setFeedback({ type: 'error', text: error.response?.data?.error || 'Impossible de charger les comptes.' });
+    }
+  }
+
+  async function openClientDetail(user) {
+    setDetailLoading(true);
+    setFeedback(null);
+    try {
+      const { data } = await api.get(`/admin/users/${user.id}/detail`);
+      setClientDetail(data);
+    } catch (error) {
+      setFeedback({ type: 'error', text: error.response?.data?.error || 'Impossible de charger le compte client.' });
+    } finally {
+      setDetailLoading(false);
     }
   }
 
@@ -125,6 +141,7 @@ export default function AdminBackoffice() {
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => setEditingUser({ ...u })} className="text-slate-250/70 hover:bg-white/5 p-1.5 rounded-lg" title="Modifier les coordonnées"><Pencil size={15} /></button>
                       <button onClick={() => setNotifyUser(u)} className="text-mint-400 hover:bg-mint-500/10 p-1.5 rounded-lg" title="Notifier le client"><Bell size={15} /></button>
+                      <button disabled={detailLoading} onClick={() => openClientDetail(u)} className="text-white hover:bg-white/10 p-1.5 rounded-lg disabled:opacity-40" title="Visualiser le compte client"><Eye size={15} /></button>
                       <button onClick={() => openFunds(u)} className="text-gold-400 hover:bg-gold-500/10 p-1.5 rounded-lg" title="Ajuster les fonds"><WalletCards size={15} /></button>
                       {u.status_kyc !== 'verified' && <button onClick={() => validateKyc(u.id, 'verified')} className="text-mint-400 hover:bg-mint-500/10 p-1.5 rounded-lg" title="Valider KYC"><Check size={15} /></button>}
                       {u.status_kyc !== 'rejected' && <button onClick={() => validateKyc(u.id, 'rejected')} className="text-coral-400 hover:bg-coral-500/10 p-1.5 rounded-lg" title="Rejeter KYC"><X size={15} /></button>}
@@ -163,6 +180,8 @@ export default function AdminBackoffice() {
           ))}
         </div>
       )}
+
+      {clientDetail && <ClientDetailDialog detail={clientDetail} onClose={() => setClientDetail(null)} />}
 
       {otpTransaction && (
         <OtpDialog transaction={otpTransaction} onClose={() => setOtpTransaction(null)} onGenerated={loadAll} />
@@ -207,6 +226,68 @@ export default function AdminBackoffice() {
     </div>
   );
 }
+
+function ClientDetailDialog({ detail, onClose }) {
+  const { user, accounts, transactions, notifications, summary } = detail;
+  return (
+    <DialogShell title={`Compte client — ${user.prenom} ${user.nom}`} onClose={onClose} wide>
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <DetailItem label="Email" value={user.email} />
+          <DetailItem label="Téléphone" value={user.phone || 'Non renseigné'} />
+          <DetailItem label="KYC" value={user.status_kyc} />
+          <DetailItem label="État du compte" value={user.status_compte} />
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <MiniStat label="Solde total" value={`${Number(summary.totalBalance).toFixed(2)} €`} />
+          <MiniStat label="Comptes" value={summary.accountCount} />
+          <MiniStat label="Transactions" value={summary.transactionCount} />
+        </div>
+        <section>
+          <h4 className="text-sm font-medium text-white mb-2">Comptes bancaires</h4>
+          {accounts.length === 0 ? <EmptyText>Aucun compte bancaire.</EmptyText> : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {accounts.map((account) => (
+                <div key={account.id} className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
+                  <div className="flex justify-between gap-3"><p className="text-sm text-white font-medium">{account.label}</p><span className="text-xs text-slate-250/40">{account.type}</span></div>
+                  <p className="amount-mono text-lg text-mint-400 mt-2">{Number(account.balance).toFixed(2)} {account.currency}</p>
+                  <p className="font-mono text-[10px] text-slate-250/40 mt-1 break-all">{account.iban}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+        <section>
+          <h4 className="text-sm font-medium text-white mb-2">Transactions récentes</h4>
+          <div className="rounded-xl border border-white/5 px-3 max-h-72 overflow-y-auto">
+            {transactions.length === 0 ? <EmptyText>Aucune transaction.</EmptyText> : transactions.map((tx) => <TransactionRow key={tx.id} tx={tx} />)}
+          </div>
+        </section>
+        <section>
+          <h4 className="text-sm font-medium text-white mb-2">Notifications récentes</h4>
+          <div className="space-y-2 max-h-44 overflow-y-auto">
+            {notifications.length === 0 ? <EmptyText>Aucune notification.</EmptyText> : notifications.map((notification) => (
+              <div key={notification.id} className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
+                <div className="flex justify-between gap-3"><p className="text-xs font-medium text-white">{notification.title}</p><span className="text-[10px] text-slate-250/35">{new Date(notification.created_at).toLocaleDateString('fr-FR')}</span></div>
+                <p className="text-xs text-slate-250/55 mt-1">{notification.message}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </DialogShell>
+  );
+}
+
+function DetailItem({ label, value }) {
+  return <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3"><p className="text-slate-250/40 mb-1">{label}</p><p className="text-white break-words">{value}</p></div>;
+}
+
+function MiniStat({ label, value }) {
+  return <div className="rounded-xl bg-mint-500/5 border border-mint-500/10 p-3 text-center"><p className="amount-mono text-sm sm:text-lg text-white">{value}</p><p className="text-[10px] text-slate-250/40 mt-1">{label}</p></div>;
+}
+
+function EmptyText({ children }) { return <p className="text-xs text-slate-250/40 text-center py-5">{children}</p>; }
 
 function NotificationDialog({ user, onClose, onSent }) {
   const [form, setForm] = useState({ title: '', message: '', kind: 'info', actionUrl: '' });
@@ -287,10 +368,10 @@ function OtpDialog({ transaction, onClose, onGenerated }) {
   );
 }
 
-function DialogShell({ title, onClose, children }) {
+function DialogShell({ title, onClose, children, wide = false }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" onMouseDown={onClose}>
-      <div className="panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
+      <div className={`panel w-full ${wide ? 'max-w-4xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto p-4 sm:p-6`} onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display font-semibold text-white">{title}</h3>
           <button type="button" onClick={onClose} className="text-slate-250/50 hover:text-white"><X size={18} /></button>

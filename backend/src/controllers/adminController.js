@@ -28,6 +28,38 @@ async function listUsers(req, res) {
   res.json({ users });
 }
 
+async function getUserDetail(req, res) {
+  const { userId } = req.params;
+  const user = await db.prepare(`
+    SELECT id, nom, prenom, email, phone, role, status_kyc, status_compte, fraud_score, created_at
+    FROM users WHERE id = ?
+  `).get(userId);
+  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+
+  const accounts = await db.prepare(`
+    SELECT id, type, currency, balance, iban, label, created_at
+    FROM accounts WHERE user_id = ? ORDER BY created_at ASC
+  `).all(userId);
+  const transactions = await db.prepare(`
+    SELECT t.* FROM transactions t
+    JOIN accounts a ON a.id = t.source_account_id
+    WHERE a.user_id = ? ORDER BY t.timestamp DESC LIMIT 100
+  `).all(userId);
+  const notifications = await db.prepare(`
+    SELECT id, title, message, kind, action_url, read_at, created_at
+    FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20
+  `).all(userId);
+  const totalBalance = accounts.reduce((sum, account) => sum + Number(account.balance), 0);
+
+  res.json({
+    user,
+    accounts,
+    transactions,
+    notifications,
+    summary: { totalBalance, accountCount: accounts.length, transactionCount: transactions.length },
+  });
+}
+
 async function getStats(req, res) {
   const totalUsers = (await db.prepare('SELECT COUNT(*) as c FROM users').get()).c;
   const pendingKyc = (await db.prepare(`SELECT COUNT(*) as c FROM users WHERE status_kyc IN ('pending','in_review')`).get()).c;
@@ -315,6 +347,7 @@ async function logAudit(userId, action, details) {
 
 module.exports = {
   listUsers,
+  getUserDetail,
   getStats,
   validateKyc,
   updateUser,

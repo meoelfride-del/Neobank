@@ -199,15 +199,35 @@ test('inscription, KYC et virement interne dynamique', async () => {
     mfaSecret: registration.body.mfaSetup.secret,
   };
 
-  const recipientAccounts = await request('/accounts', { token: recipient.token });
-  const recipientAccount = recipientAccounts.body.accounts[0];
+  const blockedBeforeKyc = await request('/accounts', { token: recipient.token });
+  assert.equal(blockedBeforeKyc.status, 403);
+  assert.equal(blockedBeforeKyc.body.code, 'KYC_REQUIRED');
 
-  const forbidden = await request(`/accounts/${sourceAccount.id}`, { token: recipient.token });
-  assert.equal(forbidden.status, 403);
+  const adminUsers = await request('/admin/users', { token: adminToken });
+  const newRecipientUser = adminUsers.body.users.find((user) => user.phone === phone);
+  assert.ok(newRecipientUser);
+  const adminClientDetail = await request(`/admin/users/${newRecipientUser.id}/detail`, { token: adminToken });
+  assert.equal(adminClientDetail.status, 200);
+  assert.equal(adminClientDetail.body.user.email, email);
+  assert.equal(adminClientDetail.body.accounts.length, 1);
+  const recipientAccount = adminClientDetail.body.accounts[0];
 
   const kyc = await request('/accounts/kyc/submit', { token: recipient.token, method: 'POST' });
   assert.equal(kyc.status, 200);
   assert.equal(kyc.body.status, 'in_review');
+
+  const adminKycApproval = await request(`/admin/kyc/${newRecipientUser.id}`, {
+    token: adminToken,
+    method: 'POST',
+    body: { decision: 'verified' },
+  });
+  assert.equal(adminKycApproval.status, 200);
+
+  const recipientAccounts = await request('/accounts', { token: recipient.token });
+  assert.equal(recipientAccounts.status, 200);
+
+  const forbidden = await request(`/accounts/${sourceAccount.id}`, { token: recipient.token });
+  assert.equal(forbidden.status, 403);
 
   const transfer = await request('/transactions/transfer', {
     token: clientToken,

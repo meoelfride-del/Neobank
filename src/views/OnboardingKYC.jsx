@@ -8,7 +8,7 @@ const STEPS = ['upload', 'scanning', 'in_review', 'verified', 'rejected'];
 
 export default function OnboardingKYC() {
   const navigate = useNavigate();
-  const { refreshUser } = useAuthStore();
+  const { refreshUser, logout } = useAuthStore();
   const [step, setStep] = useState('upload');
   const [polling, setPolling] = useState(false);
   const submitTimerRef = useRef(null);
@@ -104,11 +104,10 @@ export default function OnboardingKYC() {
           </div>
         )}
 
-        {step === 'upload' && (
-          <button onClick={() => navigate('/dashboard')} className="text-xs text-slate-250/40 hover:text-slate-250/70 mt-6">
-            Passer cette étape pour l'instant
-          </button>
-        )}
+        <button onClick={() => { logout(); navigate('/login'); }} className="text-xs text-slate-250/40 hover:text-slate-250/70 mt-6">
+          Se déconnecter
+        </button>
+
       </div>
     </div>
   );
