@@ -1,12 +1,8 @@
 import axios from 'axios';
-
-const API_BASE = import.meta.env.VITE_API_URL
-  || (import.meta.env.PROD
-    ? 'https://neobank-api-meoelfride.onrender.com/api'
-    : 'http://localhost:4000/api');
+import { API_BASE_URL } from '../config/runtime';
 
 export const apiClient = axios.create({
-  baseURL: API_BASE,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,7 +33,7 @@ apiClient.interceptors.response.use(
     originalRequest._retry = true;
     try {
       refreshPromise ||= axios
-        .post(`${API_BASE}/auth/refresh`, { refreshToken })
+        .post(`${API_BASE_URL}/auth/refresh`, { refreshToken })
         .then(({ data }) => {
           localStorage.setItem('neobank_access_token', data.accessToken);
           return data.accessToken;

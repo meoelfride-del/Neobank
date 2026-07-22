@@ -1,11 +1,7 @@
 import { io } from 'socket.io-client';
+import { SOCKET_BASE_URL } from '../config/runtime';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL
-  || (import.meta.env.PROD
-    ? 'https://neobank-api-meoelfride.onrender.com'
-    : 'http://localhost:3001');
-
-export const socket = io(SOCKET_URL, {
+export const socket = io(SOCKET_BASE_URL, {
   autoConnect: false,
   transports: ['websocket'],
   withCredentials: true,

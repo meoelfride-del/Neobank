@@ -1,9 +1,6 @@
 import { Component } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-
-const API_ROOT = import.meta.env.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
-  : (import.meta.env.PROD ? 'https://neobank-api-meoelfride.onrender.com' : 'http://localhost:4000');
+import { API_ROOT_URL } from '../config/runtime';
 
 export default class ErrorBoundary extends Component {
   state = { hasError: false };
@@ -21,7 +18,7 @@ export default class ErrorBoundary extends Component {
     };
 
     console.error('[frontend-error]', error, info);
-    fetch(`${API_ROOT}/api/monitoring/client-error`, {
+    fetch(`${API_ROOT_URL}/api/monitoring/client-error`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(report),
