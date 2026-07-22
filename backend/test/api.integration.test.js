@@ -18,7 +18,6 @@ process.env.ADMIN_PASSWORD = 'ProductionAdmin123!';
 process.env.ADMIN_PHONE = '+22900000000';
 
 const { seed } = require('../src/config/seed');
-const { bootstrapAdmin } = require('../src/config/bootstrapAdmin');
 const { startServer } = require('../server');
 
 let server;
@@ -42,7 +41,6 @@ async function request(route, { token, method = 'GET', body } = {}) {
 
 before(async () => {
   await seed();
-  await bootstrapAdmin();
   server = await startServer();
 });
 

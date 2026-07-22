@@ -4,11 +4,15 @@ const { Server } = require('socket.io');
 const app = require('./src/app');
 const db = require('./src/config/database');
 const { getClientOrigins } = require('./src/config/clientOrigins');
+const { bootstrapAdmin } = require('./src/config/bootstrapAdmin');
 const initSockets = require('./src/sockets');
 const { startCronJobs } = require('./src/services/cronService');
 
 async function startServer() {
   await db.initDatabase();
+  if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+    await bootstrapAdmin();
+  }
 
   const port = Number.parseInt(process.env.PORT || '4000', 10);
   const socketPort = Number.parseInt(process.env.SOCKET_PORT || `${port}`, 10) || port;
