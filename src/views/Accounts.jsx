@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import useAccountStore from '../store/accountStore';
 import api from '../services/api';
+import { getSocket } from '../services/socket';
 import TransactionRow from '../components/TransactionRow';
 
 const CURRENCIES = ['EUR', 'USD', 'GBP'];
@@ -18,7 +19,28 @@ export default function Accounts() {
 
   useEffect(() => {
     if (!selectedAccountId) return;
-    api.get(`/transactions/account/${selectedAccountId}`).then(({ data }) => setTransactions(data.transactions));
+    let active = true;
+    const refreshTransactions = () => api.get(`/transactions/account/${selectedAccountId}`)
+      .then(({ data }) => { if (active) setTransactions(data.transactions); })
+      .catch(() => {});
+    const socket = getSocket();
+    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') refreshTransactions(); };
+
+    refreshTransactions();
+    socket.on('transaction:notification', refreshTransactions);
+    socket.on('balance:update', refreshTransactions);
+    window.addEventListener('focus', refreshTransactions);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    const refreshInterval = window.setInterval(refreshTransactions, 15000);
+
+    return () => {
+      active = false;
+      socket.off('transaction:notification', refreshTransactions);
+      socket.off('balance:update', refreshTransactions);
+      window.removeEventListener('focus', refreshTransactions);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.clearInterval(refreshInterval);
+    };
   }, [selectedAccountId]);
 
   async function handleCreate(e) {
@@ -36,10 +58,15 @@ export default function Accounts() {
 
   async function cancelTransfer(txId) {
     if (!window.confirm('Annuler ce virement en attente et rembourser le montant ?')) return;
-    await api.post(`/transactions/${txId}/cancel`);
-    await fetchAccounts();
-    const { data } = await api.get(`/transactions/account/${selectedAccountId}`);
-    setTransactions(data.transactions);
+    try {
+      const { data: result } = await api.post(`/transactions/${txId}/cancel`);
+      setTransactionMessage({ type: 'success', text: result.message });
+      await fetchAccounts();
+      const { data } = await api.get(`/transactions/account/${selectedAccountId}`);
+      setTransactions(data.transactions);
+    } catch (error) {
+      setTransactionMessage({ type: 'error', text: error.response?.data?.error || 'Impossible d’annuler ce virement.' });
+    }
   }
 
   async function verifyOtp(txId, otp) {
@@ -48,8 +75,10 @@ export default function Accounts() {
       setTransactionMessage({ type: 'success', text: data.message });
       const response = await api.get(`/transactions/account/${selectedAccountId}`);
       setTransactions(response.data.transactions);
+      return true;
     } catch (error) {
       setTransactionMessage({ type: 'error', text: error.response?.data?.error || 'Code OTP invalide.' });
+      return false;
     }
   }
 

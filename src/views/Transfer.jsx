@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Send, Phone, Landmark, Clock, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import useAccountStore from '../store/accountStore';
 import api from '../services/api';
@@ -26,7 +27,7 @@ export default function Transfer() {
         amount: parseFloat(form.amount),
         libelle: form.libelle,
       });
-      setResult({ type: data.requiresApproval ? 'flagged' : 'success', message: data.message });
+      setResult({ type: data.requiresApproval ? 'flagged' : 'success', message: data.message, transactionId: data.transactionId });
       setForm({ destination_info: '', amount: '', libelle: '' });
       await fetchAccounts();
     } catch (err) {
@@ -86,7 +87,10 @@ export default function Transfer() {
           {result.type === 'success' && <CheckCircle2 size={16} className="mt-0.5 shrink-0" />}
           {result.type === 'flagged' && <AlertTriangle size={16} className="mt-0.5 shrink-0" />}
           {result.type === 'error' && <AlertTriangle size={16} className="mt-0.5 shrink-0" />}
-          {result.message}
+          <div className="flex-1">
+            <p>{result.message}</p>
+            {result.transactionId && <Link to="/accounts" className="inline-block mt-2 text-xs font-semibold underline underline-offset-2">Ouvrir la transaction et saisir l’OTP</Link>}
+          </div>
         </div>
       )}
 

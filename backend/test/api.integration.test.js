@@ -231,6 +231,14 @@ test('inscription, KYC et virement interne dynamique', async () => {
   });
   assert.equal(transferOtp.status, 201);
 
+  const clientTransactionDetails = await request(`/transactions/account/${sourceAccount.id}`, { token: clientToken });
+  const otpTransactionDetails = clientTransactionDetails.body.transactions.find((tx) => tx.id === transfer.body.transactionId);
+  assert.ok(otpTransactionDetails);
+  assert.equal(otpTransactionDetails.otp_required, true);
+  assert.equal(otpTransactionDetails.otp_verified, false);
+  assert.equal(otpTransactionDetails.otp_message, 'Saisissez le code reçu pour confirmer ce virement.');
+  assert.ok(otpTransactionDetails.otp_expires_at);
+
   const confirmedTransferOtp = await request(`/transactions/${transfer.body.transactionId}/verify-otp`, {
     token: clientToken,
     method: 'POST',
