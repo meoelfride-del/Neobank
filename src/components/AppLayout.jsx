@@ -6,7 +6,6 @@ import Navbar from './Navbar';
 import useAccountStore from '../store/accountStore';
 import useAuthStore from '../store/authStore';
 import { connectSocket } from '../services/socket';
-import api from '../services/api';
 
 const TITLES = {
   '/dashboard': 'Tableau de bord',
@@ -35,13 +34,8 @@ export default function AppLayout({ children }) {
       setNotifications((items) => [...items.slice(-2), { ...notification, id }]);
       window.setTimeout(() => {
         setNotifications((items) => items.filter((item) => item.id !== id));
-        if (notification.id) api.patch(`/notifications/${notification.id}/read`).catch(() => {});
       }, 8000);
     };
-
-    api.get('/notifications?unread=true')
-      .then(({ data }) => data.notifications.slice(0, 3).reverse().forEach(handleNotification))
-      .catch(() => {});
 
     socket.on('connect', handleConnect);
     socket.on('transaction:notification', handleNotification);

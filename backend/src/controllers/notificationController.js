@@ -19,4 +19,9 @@ async function markAsRead(req, res) {
   res.json({ message: 'Notification marquée comme lue.' });
 }
 
-module.exports = { listNotifications, markAsRead };
+async function markAllAsRead(req, res) {
+  await db.prepare('UPDATE notifications SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP) WHERE user_id = ?').run(req.user.id);
+  res.json({ message: 'Toutes les notifications sont marquées comme lues.' });
+}
+
+module.exports = { listNotifications, markAsRead, markAllAsRead };

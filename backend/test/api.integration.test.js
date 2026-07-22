@@ -452,6 +452,18 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
   });
   assert.equal(markedRead.status, 200);
 
+  const secondNotification = await request(`/admin/users/${recipientUser.id}/notifications`, {
+    token: adminToken,
+    method: 'POST',
+    body: { title: 'Sécurité', message: 'Un contrôle de sécurité est disponible.', kind: 'security', actionUrl: '/dashboard' },
+  });
+  assert.equal(secondNotification.status, 201);
+  const markAllRead = await request('/notifications/read-all', { token: recipient.token, method: 'PATCH' });
+  assert.equal(markAllRead.status, 200);
+  const noUnreadNotifications = await request('/notifications?unread=true', { token: recipient.token });
+  assert.equal(noUnreadNotifications.status, 200);
+  assert.equal(noUnreadNotifications.body.notifications.length, 0);
+
   const verifiedKyc = await request(`/admin/kyc/${recipientUser.id}`, {
     token: adminToken,
     method: 'POST',

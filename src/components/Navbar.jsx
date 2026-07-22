@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, ShieldAlert, ShieldCheck, Menu } from 'lucide-react';
 import useAccountStore from '../store/accountStore';
 import useAuthStore from '../store/authStore';
+import NotificationCenter from './NotificationCenter';
 
 export default function Navbar({ title, onMenuClick }) {
   const { accounts, selectedAccountId, selectAccount } = useAccountStore();
@@ -29,6 +30,8 @@ export default function Navbar({ title, onMenuClick }) {
             <ShieldCheck size={13} /> Identité vérifiée
           </span>
         )}
+
+        <NotificationCenter />
 
         {accounts.length > 0 && (
           <div className="relative">
