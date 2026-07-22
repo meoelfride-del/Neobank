@@ -12,6 +12,7 @@ router.get('/users/:userId/accounts', ctrl.listUserAccounts);
 router.post('/accounts/:accountId/adjust-balance', validate(schemas.adminBalanceAdjustment), ctrl.adjustBalance);
 router.post('/users/:userId/suspend', validate(schemas.adminSuspendUser), ctrl.suspendUser);
 router.get('/transactions/pending', ctrl.pendingTransactions);
+router.post('/transactions/:txId/otp', validate(schemas.adminTransferOtp), ctrl.generateTransferOtp);
 router.post('/transactions/:txId/review', validate(schemas.adminTransactionReview), ctrl.reviewTransaction);
 
 module.exports = router;

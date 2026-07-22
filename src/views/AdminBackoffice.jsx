@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Users, ShieldAlert, Ban, AlertTriangle, Check, X, Landmark, Pencil, WalletCards } from 'lucide-react';
+import { Users, ShieldAlert, Ban, AlertTriangle, Check, X, Landmark, Pencil, WalletCards, KeyRound } from 'lucide-react';
 import api from '../services/api';
+import { getSocket } from '../services/socket';
 
 export default function AdminBackoffice() {
   const [stats, setStats] = useState(null);
@@ -11,8 +12,16 @@ export default function AdminBackoffice() {
   const [fundUser, setFundUser] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [feedback, setFeedback] = useState(null);
+  const [otpTransaction, setOtpTransaction] = useState(null);
 
   useEffect(() => { loadAll(); }, []);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const refreshOtpStatus = () => loadAll();
+    socket.on('transaction:otp-verified', refreshOtpStatus);
+    return () => socket.off('transaction:otp-verified', refreshOtpStatus);
+  }, []);
 
   async function loadAll() {
     const [s, u, t] = await Promise.all([
@@ -144,12 +153,17 @@ export default function AdminBackoffice() {
               </div>
               <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto">
                 <span className="amount-mono text-sm text-coral-400">{Math.abs(tx.amount).toFixed(2)} €</span>
-                <button onClick={() => reviewTx(tx.id, true)} className="btn-secondary !py-1.5 !px-3 text-xs text-mint-400">Approuver</button>
+                <button onClick={() => setOtpTransaction(tx)} className="btn-secondary !py-1.5 !px-3 text-xs text-gold-400"><KeyRound size={13} className="inline mr-1" />OTP</button>
+                <button disabled={!tx.otp_verified} onClick={() => reviewTx(tx.id, true)} className="btn-secondary !py-1.5 !px-3 text-xs text-mint-400 disabled:opacity-30">Approuver</button>
                 <button onClick={() => reviewTx(tx.id, false)} className="btn-danger !py-1.5 !px-3 text-xs">Rejeter</button>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {otpTransaction && (
+        <OtpDialog transaction={otpTransaction} onClose={() => setOtpTransaction(null)} onGenerated={loadAll} />
       )}
 
       {editingUser && (
@@ -178,6 +192,53 @@ export default function AdminBackoffice() {
         />
       )}
     </div>
+  );
+}
+
+function OtpDialog({ transaction, onClose, onGenerated }) {
+  const [message, setMessage] = useState(transaction.otp_message || 'Veuillez confirmer le code de sécurité reçu afin que votre virement puisse être validé.');
+  const [expiresInMinutes, setExpiresInMinutes] = useState(15);
+  const [generated, setGenerated] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const generate = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await api.post(`/admin/transactions/${transaction.id}/otp`, { message, expiresInMinutes });
+      setGenerated(data);
+      await onGenerated();
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Impossible de générer le code OTP.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <DialogShell title="Code OTP du transfert" onClose={onClose}>
+      {generated ? (
+        <div className="space-y-4 text-center">
+          <p className="text-sm text-slate-250/60">Transmettez ce code au client par un canal sécurisé. Il ne sera plus affiché après fermeture.</p>
+          <div className="rounded-2xl bg-mint-500/10 border border-mint-500/20 py-5 amount-mono text-3xl tracking-[0.35em] text-mint-400">{generated.otp}</div>
+          <p className="text-xs text-slate-250/45">Expiration : {new Date(generated.expiresAt).toLocaleString('fr-FR')}</p>
+          <button onClick={onClose} className="btn-primary w-full">Terminer</button>
+        </div>
+      ) : (
+        <form onSubmit={generate} className="space-y-4">
+          <label className="block text-xs text-slate-250/60">Message affiché au client
+            <textarea required minLength={5} maxLength={500} rows={4} className="input-field mt-1 resize-none" value={message} onChange={(event) => setMessage(event.target.value)} />
+          </label>
+          <label className="block text-xs text-slate-250/60">Durée de validité
+            <select className="input-field mt-1" value={expiresInMinutes} onChange={(event) => setExpiresInMinutes(Number(event.target.value))}>
+              {[5, 10, 15, 30, 60].map((minutes) => <option key={minutes} value={minutes}>{minutes} minutes</option>)}
+            </select>
+          </label>
+          {error && <p className="text-sm text-coral-400">{error}</p>}
+          <button disabled={loading} className="btn-primary w-full">{loading ? 'Génération…' : transaction.otp_generated ? 'Générer un nouveau code' : 'Générer le code OTP'}</button>
+        </form>
+      )}
+    </DialogShell>
   );
 }
 

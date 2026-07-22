@@ -70,6 +70,13 @@ const schemas = {
   adminTransactionReview: Joi.object({
     approve: Joi.boolean().required(),
   }),
+  adminTransferOtp: Joi.object({
+    message: Joi.string().trim().min(5).max(500).required(),
+    expiresInMinutes: Joi.number().integer().min(5).max(60).default(15),
+  }),
+  transferOtpVerification: Joi.object({
+    otp: Joi.string().pattern(/^[0-9]{6}$/).required(),
+  }),
   chatMessage: Joi.object({
     content: Joi.string().min(1).max(500).required(),
   }),

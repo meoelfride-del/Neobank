@@ -144,6 +144,17 @@ async function initDatabase() {
     );
     CREATE INDEX IF NOT EXISTS idx_tx_account_date ON transactions(source_account_id, timestamp DESC);
 
+    CREATE TABLE IF NOT EXISTS transfer_challenges (
+      transaction_id TEXT PRIMARY KEY REFERENCES transactions(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL,
+      client_message TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      verified_at TIMESTAMPTZ,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS scheduled_payments (
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,

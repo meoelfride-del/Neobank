@@ -1,4 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
+const { randomInt } = require('node:crypto');
+const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 
 async function resolveDestinationAccount(destinationInfo) {
@@ -136,13 +138,65 @@ async function suspendUser(req, res) {
 
 async function pendingTransactions(req, res) {
   const transactions = await db.prepare(`
-    SELECT t.*, a.iban, u.email, u.fraud_score FROM transactions t
+    SELECT t.*, a.iban, u.email, u.fraud_score,
+      c.client_message AS otp_message,
+      c.expires_at AS otp_expires_at,
+      CASE WHEN c.verified_at IS NOT NULL THEN TRUE ELSE FALSE END AS otp_verified,
+      CASE WHEN c.transaction_id IS NOT NULL THEN TRUE ELSE FALSE END AS otp_generated
+    FROM transactions t
     JOIN accounts a ON t.source_account_id = a.id
     JOIN users u ON a.user_id = u.id
+    LEFT JOIN transfer_challenges c ON c.transaction_id = t.id
     WHERE t.status = 'pending'
     ORDER BY t.timestamp DESC
   `).all();
   res.json({ transactions });
+}
+
+async function generateTransferOtp(req, res, next) {
+  const { txId } = req.params;
+  const { message, expiresInMinutes } = req.body;
+  try {
+    const tx = await db.prepare(`
+      SELECT t.id, t.status, t.amount, a.user_id
+      FROM transactions t JOIN accounts a ON a.id = t.source_account_id
+      WHERE t.id = ?
+    `).get(txId);
+    if (!tx) throw httpError(404, 'Transaction introuvable.');
+    if (tx.status !== 'pending') throw httpError(409, 'Cette transaction n’est plus en attente.');
+
+    const otp = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    const codeHash = await bcrypt.hash(otp, 10);
+    const expiresAt = new Date(Date.now() + expiresInMinutes * 60_000).toISOString();
+    await db.pool.query(`
+      INSERT INTO transfer_challenges
+        (transaction_id, code_hash, client_message, expires_at, attempts, verified_at, created_by)
+      VALUES ($1, $2, $3, $4, 0, NULL, $5)
+      ON CONFLICT (transaction_id) DO UPDATE SET
+        code_hash = EXCLUDED.code_hash,
+        client_message = EXCLUDED.client_message,
+        expires_at = EXCLUDED.expires_at,
+        attempts = 0,
+        verified_at = NULL,
+        created_by = EXCLUDED.created_by,
+        created_at = CURRENT_TIMESTAMP
+    `, [txId, codeHash, message, expiresAt, req.user.id]);
+    await logAudit(req.user.id, 'transfer_otp_generated', `tx=${txId} expires=${expiresAt}`);
+
+    const io = req.app.get('io');
+    if (io) io.to(`user:${tx.user_id}`).emit('transaction:notification', {
+      direction: 'outgoing', status: 'otp_required', amount: Math.abs(tx.amount), message,
+    });
+    res.status(201).json({
+      message: 'OTP généré. Transmettez ce code au client par un canal sécurisé.',
+      otp,
+      expiresAt,
+      clientMessage: message,
+    });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.publicMessage });
+    next(err);
+  }
 }
 
 async function reviewTransaction(req, res, next) {
@@ -165,6 +219,10 @@ async function reviewTransaction(req, res, next) {
       if (!source) throw httpError(404, 'Compte source introuvable.');
 
       if (approve) {
+        const challenge = await db.prepare('SELECT verified_at, expires_at FROM transfer_challenges WHERE transaction_id = ?').get(txId);
+        if (!challenge) throw httpError(409, 'Générez d’abord un code OTP pour ce transfert.');
+        if (!challenge.verified_at) throw httpError(409, 'Le client doit d’abord confirmer le code OTP.');
+        if (new Date(challenge.expires_at).getTime() <= Date.now()) throw httpError(409, 'La validation OTP a expiré. Générez un nouveau code.');
         const destAccount = tx.type === 'virement_externe'
           ? null
           : await resolveDestinationAccount(tx.destination_info);
@@ -244,5 +302,6 @@ module.exports = {
   adjustBalance,
   suspendUser,
   pendingTransactions,
+  generateTransferOtp,
   reviewTransaction,
 };

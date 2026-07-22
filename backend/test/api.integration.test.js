@@ -126,6 +126,7 @@ test('bootstrap et connexion de l’administrateur de production', async () => {
   assert.equal(login.body.user.email, process.env.ADMIN_EMAIL);
   assert.equal(login.body.user.role, 'admin');
   assert.equal(login.body.user.status_compte, 'active');
+  adminToken = login.body.accessToken;
 });
 
 test('comptes et contrôle de propriété', async () => {
@@ -221,6 +222,28 @@ test('inscription, KYC et virement interne dynamique', async () => {
   });
   assert.equal(transfer.status, 201);
   assert.equal(transfer.body.flagged, false);
+  assert.equal(transfer.body.requiresApproval, true);
+
+  const transferOtp = await request(`/admin/transactions/${transfer.body.transactionId}/otp`, {
+    token: adminToken,
+    method: 'POST',
+    body: { message: 'Saisissez le code reçu pour confirmer ce virement.', expiresInMinutes: 15 },
+  });
+  assert.equal(transferOtp.status, 201);
+
+  const confirmedTransferOtp = await request(`/transactions/${transfer.body.transactionId}/verify-otp`, {
+    token: clientToken,
+    method: 'POST',
+    body: { otp: transferOtp.body.otp },
+  });
+  assert.equal(confirmedTransferOtp.status, 200);
+
+  const approvedTransfer = await request(`/admin/transactions/${transfer.body.transactionId}/review`, {
+    token: adminToken,
+    method: 'POST',
+    body: { approve: true },
+  });
+  assert.equal(approvedTransfer.status, 200);
 
   const credited = await request(`/accounts/${recipientAccount.id}`, { token: recipient.token });
   assert.equal(credited.status, 200);
@@ -321,6 +344,57 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
     method: 'POST',
   });
   assert.equal(duplicateCancellation.status, 409);
+
+  const otpTransfer = await request('/transactions/transfer', {
+    token: clientToken,
+    method: 'POST',
+    body: {
+      source_account_id: sourceAccount.id,
+      destination_type: 'iban',
+      destination_info: 'FR7622222222222222222222222',
+      amount: 6000,
+      libelle: 'Virement protégé OTP',
+    },
+  });
+  assert.equal(otpTransfer.status, 201);
+  assert.equal(otpTransfer.body.flagged, true);
+
+  const generatedOtp = await request(`/admin/transactions/${otpTransfer.body.transactionId}/otp`, {
+    token: adminToken,
+    method: 'POST',
+    body: { message: 'Confirmez le code communiqué pour autoriser ce virement.', expiresInMinutes: 15 },
+  });
+  assert.equal(generatedOtp.status, 201);
+  assert.match(generatedOtp.body.otp, /^[0-9]{6}$/);
+
+  const prematureApproval = await request(`/admin/transactions/${otpTransfer.body.transactionId}/review`, {
+    token: adminToken,
+    method: 'POST',
+    body: { approve: true },
+  });
+  assert.equal(prematureApproval.status, 409);
+
+  const invalidOtp = await request(`/transactions/${otpTransfer.body.transactionId}/verify-otp`, {
+    token: clientToken,
+    method: 'POST',
+    body: { otp: '999999' },
+  });
+  if (generatedOtp.body.otp !== '999999') assert.equal(invalidOtp.status, 401);
+
+  const verifiedOtp = await request(`/transactions/${otpTransfer.body.transactionId}/verify-otp`, {
+    token: clientToken,
+    method: 'POST',
+    body: { otp: generatedOtp.body.otp },
+  });
+  assert.equal(verifiedOtp.status, 200);
+  assert.equal(verifiedOtp.body.verified, true);
+
+  const approvedOtpTransfer = await request(`/admin/transactions/${otpTransfer.body.transactionId}/review`, {
+    token: adminToken,
+    method: 'POST',
+    body: { approve: true },
+  });
+  assert.equal(approvedOtpTransfer.status, 200);
 
   const users = await request('/admin/users', { token: adminToken });
   const recipientUser = users.body.users.find((user) => user.phone === recipient.phone);

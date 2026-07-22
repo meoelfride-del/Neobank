@@ -12,6 +12,7 @@ export default function Accounts() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ type: 'Courant', currency: 'EUR', label: '' });
   const [creating, setCreating] = useState(false);
+  const [transactionMessage, setTransactionMessage] = useState(null);
 
   useEffect(() => { fetchAccounts(); }, []);
 
@@ -39,6 +40,17 @@ export default function Accounts() {
     await fetchAccounts();
     const { data } = await api.get(`/transactions/account/${selectedAccountId}`);
     setTransactions(data.transactions);
+  }
+
+  async function verifyOtp(txId, otp) {
+    try {
+      const { data } = await api.post(`/transactions/${txId}/verify-otp`, { otp });
+      setTransactionMessage({ type: 'success', text: data.message });
+      const response = await api.get(`/transactions/account/${selectedAccountId}`);
+      setTransactions(response.data.transactions);
+    } catch (error) {
+      setTransactionMessage({ type: 'error', text: error.response?.data?.error || 'Code OTP invalide.' });
+    }
   }
 
   return (
@@ -71,11 +83,12 @@ export default function Accounts() {
       </div>
 
       <div className="panel p-4 sm:p-6">
+        {transactionMessage && <p className={`text-xs rounded-lg px-3 py-2 mb-3 ${transactionMessage.type === 'success' ? 'bg-mint-500/10 text-mint-400' : 'bg-coral-500/10 text-coral-400'}`}>{transactionMessage.text}</p>}
         <p className="text-sm font-medium text-white mb-2">Historique du compte sélectionné</p>
         {transactions.length === 0 ? (
           <p className="text-sm text-slate-250/40 py-6 text-center">Aucune transaction.</p>
         ) : (
-          <div>{transactions.map((tx) => <TransactionRow key={tx.id} tx={tx} onCancel={cancelTransfer} />)}</div>
+          <div>{transactions.map((tx) => <TransactionRow key={tx.id} tx={tx} onCancel={cancelTransfer} onVerifyOtp={verifyOtp} />)}</div>
         )}
       </div>
 

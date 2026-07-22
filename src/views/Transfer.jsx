@@ -26,7 +26,7 @@ export default function Transfer() {
         amount: parseFloat(form.amount),
         libelle: form.libelle,
       });
-      setResult({ type: data.flagged ? 'flagged' : 'success', message: data.message });
+      setResult({ type: data.requiresApproval ? 'flagged' : 'success', message: data.message });
       setForm({ destination_info: '', amount: '', libelle: '' });
       await fetchAccounts();
     } catch (err) {

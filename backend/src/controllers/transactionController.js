@@ -1,4 +1,5 @@
 const { v4: uuid } = require('uuid');
+const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 const { categorize } = require('../services/budgetService');
 const { computeFraudScore, requiresManualReview } = require('../services/fraudService');
@@ -22,7 +23,14 @@ async function listTransactions(req, res) {
   }
 
   const transactions = await db.prepare(`
-    SELECT * FROM transactions WHERE source_account_id = ? ORDER BY timestamp DESC LIMIT 200
+    SELECT t.*,
+      c.client_message AS otp_message,
+      c.expires_at AS otp_expires_at,
+      CASE WHEN c.verified_at IS NOT NULL THEN TRUE ELSE FALSE END AS otp_verified,
+      CASE WHEN c.transaction_id IS NOT NULL THEN TRUE ELSE FALSE END AS otp_required
+    FROM transactions t
+    LEFT JOIN transfer_challenges c ON c.transaction_id = t.id
+    WHERE t.source_account_id = ? ORDER BY t.timestamp DESC LIMIT 200
   `).all(accountId);
   res.json({ transactions });
 }
@@ -63,6 +71,7 @@ async function transfer(req, res, next) {
       });
 
       const flagged = requiresManualReview(fraudScore);
+      const requiresApproval = true;
       const category = categorize(libelle || '');
       const txId = uuid();
       const destAccount = await resolveDestinationAccount(destination_info);
@@ -73,9 +82,9 @@ async function transfer(req, res, next) {
       await db.prepare(`
         INSERT INTO transactions (id, source_account_id, destination_info, amount, type, category, status, libelle)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(txId, source_account_id, destination_info, -amount, txType, category, flagged ? 'pending' : 'completed', libelle || '');
+      `).run(txId, source_account_id, destination_info, -amount, txType, category, requiresApproval ? 'pending' : 'completed', libelle || '');
 
-      if (destAccount && !flagged) {
+      if (destAccount && !requiresApproval) {
         await db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(amount, destAccount.id);
         await db.prepare(`
           INSERT INTO transactions (id, source_account_id, destination_info, amount, type, category, status, libelle)
@@ -88,7 +97,7 @@ async function transfer(req, res, next) {
       }
 
       const updatedSource = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(source_account_id);
-      return { txId, updatedSource, destAccount, flagged, fraudScore, txType, source };
+      return { txId, updatedSource, destAccount, flagged, requiresApproval, fraudScore, txType, source };
     });
     const result = await runTransfer();
 
@@ -100,12 +109,12 @@ async function transfer(req, res, next) {
 
       io.to(`user:${req.user.id}`).emit('transaction:notification', {
         direction: 'outgoing',
-        status: result.flagged ? 'pending' : 'completed',
+        status: result.requiresApproval ? 'pending' : 'completed',
         amount,
-        message: result.flagged ? 'Virement sortant en attente de validation' : 'Virement sortant effectué',
+        message: result.requiresApproval ? 'Virement sortant en attente de validation' : 'Virement sortant effectué',
       });
 
-      if (result.destAccount && !result.flagged) {
+      if (result.destAccount && !result.requiresApproval) {
         io.to(`user:${result.destAccount.user_id}`).emit('balance:update', {
           accountId: result.destAccount.id,
           balance: result.destAccount.balance,
@@ -119,13 +128,12 @@ async function transfer(req, res, next) {
 
     res.status(201).json({
       message: result.flagged
-        ? 'Virement en attente de vérification manuelle (activité inhabituelle détectée).'
-        : result.txType === 'virement_externe'
-          ? 'Virement externe effectué avec succès.'
-          : 'Virement effectué avec succès.',
+        ? 'Virement en attente de validation manuelle (activité inhabituelle détectée).'
+        : 'Virement enregistré. Un administrateur va générer votre code OTP avant validation.',
       transactionId: result.txId,
       newBalance: result.updatedSource.balance,
       flagged: result.flagged,
+      requiresApproval: result.requiresApproval,
     });
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.publicMessage });
@@ -162,6 +170,42 @@ async function cancelTransfer(req, res, next) {
       });
     }
     res.json({ message: 'Virement annulé et montant remboursé.' });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.publicMessage });
+    next(err);
+  }
+}
+
+async function verifyTransferOtp(req, res, next) {
+  const { txId } = req.params;
+  const { otp } = req.body;
+  try {
+    const tx = await db.prepare(`
+      SELECT t.id, t.status, a.user_id
+      FROM transactions t JOIN accounts a ON a.id = t.source_account_id
+      WHERE t.id = ?
+    `).get(txId);
+    if (!tx) throw httpError(404, 'Transaction introuvable.');
+    if (tx.user_id !== req.user.id) throw httpError(403, 'Ce transfert ne vous appartient pas.');
+    if (tx.status !== 'pending') throw httpError(409, 'Ce transfert n’est plus en attente.');
+
+    const challenge = await db.prepare('SELECT * FROM transfer_challenges WHERE transaction_id = ?').get(txId);
+    if (!challenge) throw httpError(409, 'Le code OTP n’a pas encore été généré par l’administrateur.');
+    if (challenge.verified_at) return res.json({ message: 'Code OTP déjà vérifié.', verified: true });
+    if (challenge.attempts >= 5) throw httpError(429, 'Nombre maximal de tentatives atteint. Demandez un nouveau code.');
+    if (new Date(challenge.expires_at).getTime() <= Date.now()) throw httpError(410, 'Ce code OTP a expiré.');
+
+    const valid = await bcrypt.compare(otp, challenge.code_hash);
+    if (!valid) {
+      await db.prepare('UPDATE transfer_challenges SET attempts = attempts + 1 WHERE transaction_id = ?').run(txId);
+      throw httpError(401, 'Code OTP incorrect.');
+    }
+
+    await db.prepare('UPDATE transfer_challenges SET verified_at = CURRENT_TIMESTAMP WHERE transaction_id = ?').run(txId);
+    await logAudit(req.user.id, 'transfer_otp_verified', `tx=${txId}`);
+    const io = req.app.get('io');
+    if (io) io.to('role:admin').emit('transaction:otp-verified', { transactionId: txId });
+    res.json({ message: 'Code OTP vérifié. Le transfert peut maintenant être validé.', verified: true });
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.publicMessage });
     next(err);
@@ -288,4 +332,4 @@ async function logAudit(userId, action, details) {
   await db.prepare('INSERT INTO audit_logs (id, user_id, action, details) VALUES (?, ?, ?, ?)').run(uuidv4(), userId, action, details);
 }
 
-module.exports = { listTransactions, transfer, cancelTransfer, createScheduledPayment, listScheduledPayments, reviewTransaction };
+module.exports = { listTransactions, transfer, cancelTransfer, verifyTransferOtp, createScheduledPayment, listScheduledPayments, reviewTransaction };
