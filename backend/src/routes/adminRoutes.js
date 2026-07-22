@@ -8,6 +8,7 @@ router.get('/users', ctrl.listUsers);
 router.get('/stats', ctrl.getStats);
 router.post('/kyc/:userId', validate(schemas.adminKycDecision), ctrl.validateKyc);
 router.patch('/users/:userId', validate(schemas.adminUpdateUser), ctrl.updateUser);
+router.post('/users/:userId/notifications', validate(schemas.adminNotification), ctrl.sendUserNotification);
 router.get('/users/:userId/accounts', ctrl.listUserAccounts);
 router.post('/accounts/:accountId/adjust-balance', validate(schemas.adminBalanceAdjustment), ctrl.adjustBalance);
 router.post('/users/:userId/suspend', validate(schemas.adminSuspendUser), ctrl.suspendUser);

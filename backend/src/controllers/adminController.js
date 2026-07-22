@@ -83,6 +83,26 @@ async function listUserAccounts(req, res) {
   res.json({ accounts });
 }
 
+async function sendUserNotification(req, res) {
+  const { userId } = req.params;
+  const { title, message, kind, actionUrl } = req.body;
+  const user = await db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+
+  const notification = {
+    id: uuidv4(), user_id: userId, title, message, kind, action_url: actionUrl || null,
+  };
+  await db.prepare(`
+    INSERT INTO notifications (id, user_id, title, message, kind, action_url, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(notification.id, userId, title, message, kind, notification.action_url, req.user.id);
+  await logAudit(req.user.id, 'client_notification', `user=${userId} notification=${notification.id} kind=${kind}`);
+
+  const io = req.app.get('io');
+  if (io) io.to(`user:${userId}`).emit('admin:notification', notification);
+  res.status(201).json({ message: 'Notification envoyée au client.', notification });
+}
+
 async function adjustBalance(req, res, next) {
   const { accountId } = req.params;
   const { operation, amount, reason } = req.body;
@@ -299,6 +319,7 @@ module.exports = {
   validateKyc,
   updateUser,
   listUserAccounts,
+  sendUserNotification,
   adjustBalance,
   suspendUser,
   pendingTransactions,

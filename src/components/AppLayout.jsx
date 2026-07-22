@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { ArrowDownLeft, ArrowUpRight, X } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { ArrowDownLeft, ArrowUpRight, Bell, X } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import useAccountStore from '../store/accountStore';
 import useAuthStore from '../store/authStore';
 import { connectSocket } from '../services/socket';
+import api from '../services/api';
 
 const TITLES = {
   '/dashboard': 'Tableau de bord',
@@ -23,24 +24,34 @@ export default function AppLayout({ children }) {
   const { bindSocketListeners } = useAccountStore();
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isAuthenticated) return;
     const socket = connectSocket();
     const handleConnect = () => bindSocketListeners();
     const handleNotification = (notification) => {
-      const id = `${Date.now()}-${Math.random()}`;
+      const id = notification.id || `${Date.now()}-${Math.random()}`;
       setNotifications((items) => [...items.slice(-2), { ...notification, id }]);
-      window.setTimeout(() => setNotifications((items) => items.filter((item) => item.id !== id)), 6000);
+      window.setTimeout(() => {
+        setNotifications((items) => items.filter((item) => item.id !== id));
+        if (notification.id) api.patch(`/notifications/${notification.id}/read`).catch(() => {});
+      }, 8000);
     };
+
+    api.get('/notifications?unread=true')
+      .then(({ data }) => data.notifications.slice(0, 3).reverse().forEach(handleNotification))
+      .catch(() => {});
 
     socket.on('connect', handleConnect);
     socket.on('transaction:notification', handleNotification);
+    socket.on('admin:notification', handleNotification);
     bindSocketListeners();
 
     return () => {
       socket.off('connect', handleConnect);
       socket.off('transaction:notification', handleNotification);
+      socket.off('admin:notification', handleNotification);
     };
   }, [isAuthenticated, bindSocketListeners]);
 
@@ -70,11 +81,13 @@ export default function AppLayout({ children }) {
       <div className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-5 sm:w-96 z-[60] space-y-2" aria-live="polite">
         {notifications.map((notification) => (
           <div key={notification.id} className="panel p-4 flex items-start gap-3 shadow-2xl border-mint-500/20">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${notification.direction === 'incoming' ? 'bg-mint-500/10 text-mint-400' : 'bg-gold-500/10 text-gold-400'}`}>
-              {notification.direction === 'incoming' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${notification.kind === 'security' ? 'bg-coral-500/10 text-coral-400' : notification.direction === 'incoming' || notification.kind === 'success' ? 'bg-mint-500/10 text-mint-400' : 'bg-gold-500/10 text-gold-400'}`}>
+              {notification.kind ? <Bell size={18} /> : notification.direction === 'incoming' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white">{notification.message}</p>
+              {notification.title && <p className="text-sm font-semibold text-white">{notification.title}</p>}
+              <p className={notification.title ? 'text-xs text-slate-250/70 mt-1' : 'text-sm font-medium text-white'}>{notification.message}</p>
+              {notification.action_url && <button onClick={() => navigate(notification.action_url)} className="text-xs text-mint-400 hover:underline mt-2">Ouvrir</button>}
               {Number.isFinite(Number(notification.amount)) && <p className="amount-mono text-xs text-slate-250/60 mt-1">{Number(notification.amount).toFixed(2)} €</p>}
             </div>
             <button onClick={() => setNotifications((items) => items.filter((item) => item.id !== notification.id))} className="text-slate-250/40"><X size={15} /></button>

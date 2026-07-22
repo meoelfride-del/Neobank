@@ -14,6 +14,7 @@ const cardRoutes = require('./routes/cardRoutes');
 const budgetRoutes = require('./routes/budgetRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -78,6 +79,7 @@ app.use('/api/cards', cardRoutes);
 app.use('/api/budget', budgetRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

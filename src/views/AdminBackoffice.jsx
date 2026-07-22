@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, ShieldAlert, Ban, AlertTriangle, Check, X, Landmark, Pencil, WalletCards, KeyRound } from 'lucide-react';
+import { Users, ShieldAlert, Ban, AlertTriangle, Check, X, Landmark, Pencil, WalletCards, KeyRound, Bell } from 'lucide-react';
 import api from '../services/api';
 import { getSocket } from '../services/socket';
 
@@ -13,6 +13,7 @@ export default function AdminBackoffice() {
   const [accounts, setAccounts] = useState([]);
   const [feedback, setFeedback] = useState(null);
   const [otpTransaction, setOtpTransaction] = useState(null);
+  const [notifyUser, setNotifyUser] = useState(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -123,6 +124,7 @@ export default function AdminBackoffice() {
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => setEditingUser({ ...u })} className="text-slate-250/70 hover:bg-white/5 p-1.5 rounded-lg" title="Modifier les coordonnées"><Pencil size={15} /></button>
+                      <button onClick={() => setNotifyUser(u)} className="text-mint-400 hover:bg-mint-500/10 p-1.5 rounded-lg" title="Notifier le client"><Bell size={15} /></button>
                       <button onClick={() => openFunds(u)} className="text-gold-400 hover:bg-gold-500/10 p-1.5 rounded-lg" title="Ajuster les fonds"><WalletCards size={15} /></button>
                       {u.status_kyc !== 'verified' && <button onClick={() => validateKyc(u.id, 'verified')} className="text-mint-400 hover:bg-mint-500/10 p-1.5 rounded-lg" title="Valider KYC"><Check size={15} /></button>}
                       {u.status_kyc !== 'rejected' && <button onClick={() => validateKyc(u.id, 'rejected')} className="text-coral-400 hover:bg-coral-500/10 p-1.5 rounded-lg" title="Rejeter KYC"><X size={15} /></button>}
@@ -166,6 +168,17 @@ export default function AdminBackoffice() {
         <OtpDialog transaction={otpTransaction} onClose={() => setOtpTransaction(null)} onGenerated={loadAll} />
       )}
 
+      {notifyUser && (
+        <NotificationDialog
+          user={notifyUser}
+          onClose={() => setNotifyUser(null)}
+          onSent={async (payload) => {
+            const ok = await runAction(() => api.post(`/admin/users/${notifyUser.id}/notifications`, payload), 'Notification envoyée au client.');
+            if (ok) setNotifyUser(null);
+          }}
+        />
+      )}
+
       {editingUser && (
         <EditUserDialog
           user={editingUser}
@@ -192,6 +205,38 @@ export default function AdminBackoffice() {
         />
       )}
     </div>
+  );
+}
+
+function NotificationDialog({ user, onClose, onSent }) {
+  const [form, setForm] = useState({ title: '', message: '', kind: 'info', actionUrl: '' });
+  const [sending, setSending] = useState(false);
+  const submit = async (event) => {
+    event.preventDefault();
+    setSending(true);
+    await onSent(form);
+    setSending(false);
+  };
+  return (
+    <DialogShell title={`Notifier ${user.prenom} ${user.nom}`} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <AdminInput label="Titre de la notification" value={form.title} onChange={(value) => setForm({ ...form, title: value })} />
+        <label className="block text-xs text-slate-250/60">Type d’action
+          <select className="input-field mt-1" value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value })}>
+            <option value="info">Information</option><option value="success">Confirmation</option><option value="warning">Action requise</option><option value="security">Sécurité</option>
+          </select>
+        </label>
+        <label className="block text-xs text-slate-250/60">Message affiché au client
+          <textarea required minLength={3} maxLength={1000} rows={5} className="input-field mt-1 resize-none" value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} />
+        </label>
+        <label className="block text-xs text-slate-250/60">Page à ouvrir (optionnel)
+          <select className="input-field mt-1" value={form.actionUrl} onChange={(event) => setForm({ ...form, actionUrl: event.target.value })}>
+            <option value="">Aucune</option><option value="/dashboard">Tableau de bord</option><option value="/accounts">Comptes</option><option value="/transfer">Virements</option><option value="/cards">Cartes</option><option value="/budget">Budget</option><option value="/chatbot">Assistance</option>
+          </select>
+        </label>
+        <button disabled={sending} className="btn-primary w-full">{sending ? 'Envoi…' : 'Envoyer la notification'}</button>
+      </form>
+    </DialogShell>
   );
 }
 

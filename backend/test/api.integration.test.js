@@ -400,6 +400,30 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
   const recipientUser = users.body.users.find((user) => user.phone === recipient.phone);
   assert.ok(recipientUser);
 
+  const sentNotification = await request(`/admin/users/${recipientUser.id}/notifications`, {
+    token: adminToken,
+    method: 'POST',
+    body: {
+      title: 'Action requise',
+      message: 'Veuillez vérifier les informations de votre compte.',
+      kind: 'warning',
+      actionUrl: '/accounts',
+    },
+  });
+  assert.equal(sentNotification.status, 201);
+
+  const unreadNotifications = await request('/notifications?unread=true', { token: recipient.token });
+  assert.equal(unreadNotifications.status, 200);
+  const receivedNotification = unreadNotifications.body.notifications.find((item) => item.id === sentNotification.body.notification.id);
+  assert.ok(receivedNotification);
+  assert.equal(receivedNotification.message, 'Veuillez vérifier les informations de votre compte.');
+
+  const markedRead = await request(`/notifications/${receivedNotification.id}/read`, {
+    token: recipient.token,
+    method: 'PATCH',
+  });
+  assert.equal(markedRead.status, 200);
+
   const verifiedKyc = await request(`/admin/kyc/${recipientUser.id}`, {
     token: adminToken,
     method: 'POST',

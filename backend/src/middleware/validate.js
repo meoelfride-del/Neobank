@@ -74,6 +74,12 @@ const schemas = {
     message: Joi.string().trim().min(5).max(500).required(),
     expiresInMinutes: Joi.number().integer().min(5).max(60).default(15),
   }),
+  adminNotification: Joi.object({
+    title: Joi.string().trim().min(3).max(100).required(),
+    message: Joi.string().trim().min(3).max(1000).required(),
+    kind: Joi.string().valid('info', 'success', 'warning', 'security').default('info'),
+    actionUrl: Joi.string().pattern(/^\/[a-zA-Z0-9/_-]*$/).allow('', null).default(null),
+  }),
   transferOtpVerification: Joi.object({
     otp: Joi.string().pattern(/^[0-9]{6}$/).required(),
   }),
