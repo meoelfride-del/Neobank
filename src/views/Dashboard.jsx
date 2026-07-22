@@ -34,7 +34,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Solde principal */}
-        <div className="lg:col-span-2 panel p-7 relative overflow-hidden">
+        <div className="lg:col-span-2 panel p-4 sm:p-7 relative overflow-hidden">
           <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-mint-500/10 blur-3xl" />
           <p className="text-sm text-slate-250/50 mb-2 relative z-10">Solde total ({accounts.length} compte{accounts.length > 1 ? 's' : ''})</p>
           <p
@@ -44,7 +44,7 @@ export default function Dashboard() {
             {totalBalance.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
           </p>
 
-          <div className="flex gap-2 mt-6 relative z-10">
+          <div className="flex flex-col xs:flex-row gap-2 mt-6 relative z-10">
             <Link to="/transfer" className="btn-primary flex items-center gap-2 text-sm">
               <Send size={15} /> Virement
             </Link>
@@ -53,7 +53,7 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mt-6 relative z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 relative z-10">
             {accounts.map((acc) => (
               <div key={acc.id} className="bg-white/5 rounded-xl p-4 border border-white/5">
                 <p className="text-xs text-slate-250/50 mb-1">{acc.label}</p>
@@ -75,7 +75,7 @@ export default function Dashboard() {
       </div>
 
       {/* Transactions récentes */}
-      <div className="panel p-6">
+      <div className="panel p-4 sm:p-6">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-medium text-white">Transactions récentes</p>
           <Link to="/accounts" className="text-xs text-mint-400 hover:underline">Tout voir</Link>

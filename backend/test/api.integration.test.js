@@ -290,6 +290,38 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
   assert.equal(login.status, 200);
   adminToken = login.body.accessToken;
 
+  const fundedSource = await request(`/admin/accounts/${sourceAccount.id}/adjust-balance`, {
+    token: adminToken,
+    method: 'POST',
+    body: { operation: 'credit', amount: 10000, reason: 'Provision test annulation' },
+  });
+  assert.equal(fundedSource.status, 200);
+
+  const pendingTransfer = await request('/transactions/transfer', {
+    token: clientToken,
+    method: 'POST',
+    body: {
+      source_account_id: sourceAccount.id,
+      destination_type: 'iban',
+      destination_info: 'FR7611111111111111111111111',
+      amount: 6000,
+      libelle: 'Virement à contrôler',
+    },
+  });
+  assert.equal(pendingTransfer.status, 201);
+  assert.equal(pendingTransfer.body.flagged, true);
+
+  const cancelledTransfer = await request(`/transactions/${pendingTransfer.body.transactionId}/cancel`, {
+    token: clientToken,
+    method: 'POST',
+  });
+  assert.equal(cancelledTransfer.status, 200);
+  const duplicateCancellation = await request(`/transactions/${pendingTransfer.body.transactionId}/cancel`, {
+    token: clientToken,
+    method: 'POST',
+  });
+  assert.equal(duplicateCancellation.status, 409);
+
   const users = await request('/admin/users', { token: adminToken });
   const recipientUser = users.body.users.find((user) => user.phone === recipient.phone);
   assert.ok(recipientUser);
@@ -317,6 +349,13 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
   });
   assert.equal(credited.status, 200);
   assert.equal(credited.body.balance, 125.5);
+
+  const neutralTransaction = await request(`/transactions/account/${managedAccount.id}`, { token: adminToken });
+  assert.equal(neutralTransaction.status, 200);
+  const adjustmentEntry = neutralTransaction.body.transactions.find((tx) => tx.libelle === 'Régularisation test');
+  assert.ok(adjustmentEntry);
+  assert.equal(adjustmentEntry.destination_info, 'Crédit de compte');
+  assert.equal(adjustmentEntry.category, 'Autre');
 
   const debited = await request(`/admin/accounts/${managedAccount.id}/adjust-balance`, {
     token: adminToken,

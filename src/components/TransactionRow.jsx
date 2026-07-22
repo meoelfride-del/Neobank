@@ -3,7 +3,7 @@ const CATEGORY_ICONS = {
   Santé: '💊', Shopping: '🛍️', Salaire: '💼', Autre: '💳',
 };
 
-export default function TransactionRow({ tx }) {
+export default function TransactionRow({ tx, onCancel }) {
   const isCredit = tx.amount >= 0;
   const date = new Date(tx.timestamp).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 
@@ -23,6 +23,8 @@ export default function TransactionRow({ tx }) {
           {isCredit ? '+' : ''}{tx.amount.toFixed(2)} €
         </p>
         {tx.status === 'pending' && <p className="text-[10px] text-gold-400 mt-0.5">En vérification</p>}
+        {tx.status === 'failed' && <p className="text-[10px] text-coral-400 mt-0.5">Annulé</p>}
+        {tx.status === 'pending' && onCancel && <button onClick={() => onCancel(tx.id)} className="text-[10px] text-coral-400 hover:underline mt-1">Annuler</button>}
       </div>
     </div>
   );

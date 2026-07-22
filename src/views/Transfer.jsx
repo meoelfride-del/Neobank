@@ -59,7 +59,7 @@ export default function Transfer() {
     <div className="max-w-xl mx-auto space-y-5">
       <h2 className="text-lg font-display font-semibold text-white">Effectuer un virement</h2>
 
-      <div className="panel p-1.5 flex gap-1">
+      <div className="panel p-1.5 grid grid-cols-1 xs:grid-cols-2 gap-1">
         <button onClick={() => { setMode('instant'); setResult(null); }} className={`flex-1 flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl transition-colors ${mode === 'instant' ? 'bg-mint-500/10 text-mint-400' : 'text-slate-250/60 hover:bg-white/5'}`}>
           <Send size={15} /> Virement instantané
         </button>
@@ -91,7 +91,7 @@ export default function Transfer() {
       )}
 
       {mode === 'instant' ? (
-        <form onSubmit={handleInstant} className="panel p-6 space-y-4">
+        <form onSubmit={handleInstant} className="panel p-4 sm:p-6 space-y-4">
           <div>
             <label className="label-field">Envoyer par</label>
             <div className="flex gap-2">
@@ -130,7 +130,7 @@ export default function Transfer() {
           </button>
         </form>
       ) : (
-        <form onSubmit={handleScheduled} className="panel p-6 space-y-4">
+        <form onSubmit={handleScheduled} className="panel p-4 sm:p-6 space-y-4">
           <div>
             <label className="label-field">IBAN du bénéficiaire</label>
             <input required className="input-field font-mono" placeholder="FR76..." value={scheduledForm.destination_info} onChange={(e) => setScheduledForm({ ...scheduledForm, destination_info: e.target.value })} />
@@ -139,7 +139,7 @@ export default function Transfer() {
             <label className="label-field">Libellé du mandat</label>
             <input required className="input-field" placeholder="Ex : Loyer appartement" value={scheduledForm.label} onChange={(e) => setScheduledForm({ ...scheduledForm, label: e.target.value })} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="label-field">Montant (€)</label>
               <input required type="number" step="0.01" min="0.01" className="input-field" value={scheduledForm.amount} onChange={(e) => setScheduledForm({ ...scheduledForm, amount: e.target.value })} />

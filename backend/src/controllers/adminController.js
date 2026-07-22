@@ -95,10 +95,11 @@ async function adjustBalance(req, res, next) {
       if (newBalance < 0) throw httpError(409, 'Solde insuffisant pour effectuer ce retrait.');
 
       await db.prepare('UPDATE accounts SET balance = ? WHERE id = ?').run(newBalance, accountId);
+      const publicSource = operation === 'credit' ? 'Crédit de compte' : 'Ajustement de solde';
       await db.prepare(`
         INSERT INTO transactions (id, source_account_id, destination_info, amount, type, category, status, libelle)
-        VALUES (?, ?, 'Ajustement administrateur', ?, 'depot', 'Administration', 'completed', ?)
-      `).run(uuidv4(), accountId, signedAmount, reason);
+        VALUES (?, ?, ?, ?, 'depot', 'Autre', 'completed', ?)
+      `).run(uuidv4(), accountId, publicSource, signedAmount, reason);
       await logAudit(req.user.id, 'balance_adjustment', `account=${accountId} operation=${operation} amount=${amount} reason=${reason}`);
       return { account, newBalance };
     });
@@ -106,7 +107,12 @@ async function adjustBalance(req, res, next) {
     const result = await runAdjustment();
     if (io) {
       io.to(`user:${result.account.user_id}`).emit('balance:update', { accountId, balance: result.newBalance });
-      io.to(`user:${result.account.user_id}`).emit('transaction:new', { message: reason });
+      io.to(`user:${result.account.user_id}`).emit('transaction:notification', {
+        direction: operation === 'credit' ? 'incoming' : 'outgoing',
+        status: 'completed',
+        amount,
+        message: operation === 'credit' ? 'Fonds ajoutés à votre compte' : 'Solde de votre compte ajusté',
+      });
     }
     res.json({ message: 'Solde ajusté.', accountId, balance: result.newBalance });
   } catch (error) {
@@ -195,6 +201,13 @@ async function reviewTransaction(req, res, next) {
         accountId: result.source.id,
         balance: sourceBalance,
       });
+      const reviewedTx = await db.prepare('SELECT amount FROM transactions WHERE id = ?').get(txId);
+      io.to(`user:${result.source.user_id}`).emit('transaction:notification', {
+        direction: 'outgoing',
+        status: approve ? 'completed' : 'cancelled',
+        amount: Math.abs(reviewedTx.amount),
+        message: approve ? 'Votre virement a été validé' : 'Votre virement a été rejeté et remboursé',
+      });
     }
 
     if (io && result.destAccount) {
@@ -204,6 +217,10 @@ async function reviewTransaction(req, res, next) {
         balance: destBalance,
       });
       io.to(`user:${result.destAccount.user_id}`).emit('transaction:new', { message: 'Virement approuvé' });
+      const reviewedTx = await db.prepare('SELECT amount FROM transactions WHERE id = ?').get(txId);
+      io.to(`user:${result.destAccount.user_id}`).emit('transaction:notification', {
+        direction: 'incoming', status: 'completed', amount: Math.abs(reviewedTx.amount), message: 'Nouveau virement reçu',
+      });
     }
 
     res.json({ message: approve ? 'Transaction validée.' : 'Transaction rejetée et remboursée.' });

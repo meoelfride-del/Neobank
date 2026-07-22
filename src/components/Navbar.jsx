@@ -10,12 +10,12 @@ export default function Navbar({ title, onMenuClick }) {
   const selected = accounts.find((a) => a.id === selectedAccountId);
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between gap-4 px-5 md:px-8 py-4 border-b border-white/5 bg-ink-900/80 backdrop-blur-md">
+    <header className="sticky top-0 z-20 flex items-center justify-between gap-2 px-3.5 sm:px-5 md:px-8 py-3.5 sm:py-4 border-b border-white/5 bg-ink-900/80 backdrop-blur-md">
       <div className="flex items-center gap-3">
         <button onClick={onMenuClick} className="md:hidden text-slate-250/70">
           <Menu size={22} />
         </button>
-        <h1 className="text-lg md:text-xl font-display font-semibold text-white">{title}</h1>
+        <h1 className="text-base sm:text-lg md:text-xl font-display font-semibold text-white truncate">{title}</h1>
       </div>
 
       <div className="flex items-center gap-3">
@@ -36,7 +36,7 @@ export default function Navbar({ title, onMenuClick }) {
               onClick={() => setOpen((v) => !v)}
               className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3.5 py-2 text-sm text-white transition-colors"
             >
-              <span className="font-medium">{selected?.label || 'Compte'}</span>
+              <span className="font-medium max-w-20 sm:max-w-none truncate">{selected?.label || 'Compte'}</span>
               <span className="text-slate-250/50 font-mono text-xs">{selected?.currency}</span>
               <ChevronDown size={15} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>

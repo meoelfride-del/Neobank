@@ -98,12 +98,22 @@ async function transfer(req, res, next) {
         balance: result.updatedSource.balance,
       });
 
-      if (result.destAccount) {
+      io.to(`user:${req.user.id}`).emit('transaction:notification', {
+        direction: 'outgoing',
+        status: result.flagged ? 'pending' : 'completed',
+        amount,
+        message: result.flagged ? 'Virement sortant en attente de validation' : 'Virement sortant effectué',
+      });
+
+      if (result.destAccount && !result.flagged) {
         io.to(`user:${result.destAccount.user_id}`).emit('balance:update', {
           accountId: result.destAccount.id,
           balance: result.destAccount.balance,
         });
         io.to(`user:${result.destAccount.user_id}`).emit('transaction:new', { message: 'Nouveau virement reçu' });
+        io.to(`user:${result.destAccount.user_id}`).emit('transaction:notification', {
+          direction: 'incoming', status: 'completed', amount, message: 'Nouveau virement reçu',
+        });
       }
     }
 
@@ -117,6 +127,41 @@ async function transfer(req, res, next) {
       newBalance: result.updatedSource.balance,
       flagged: result.flagged,
     });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.publicMessage });
+    next(err);
+  }
+}
+
+async function cancelTransfer(req, res, next) {
+  const { txId } = req.params;
+  const io = req.app.get('io');
+  try {
+    const runCancellation = db.transaction(async () => {
+      const tx = await db.prepare('SELECT * FROM transactions WHERE id = ? FOR UPDATE').get(txId);
+      if (!tx) throw httpError(404, 'Transaction introuvable.');
+      if (!['virement_interne', 'virement_externe'].includes(tx.type)) throw httpError(409, 'Cette opération ne peut pas être annulée.');
+      if (tx.status !== 'pending') throw httpError(409, 'Seul un transfert en attente peut être annulé.');
+      const source = await db.prepare('SELECT * FROM accounts WHERE id = ? FOR UPDATE').get(tx.source_account_id);
+      if (!source) throw httpError(404, 'Compte source introuvable.');
+      if (source.user_id !== req.user.id && req.user.role !== 'admin') throw httpError(403, 'Ce transfert ne vous appartient pas.');
+
+      const refund = Math.abs(tx.amount);
+      await db.prepare(`UPDATE transactions SET status = 'failed', libelle = ? WHERE id = ?`)
+        .run(`${tx.libelle || 'Virement'} — annulé`, txId);
+      await db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(refund, source.id);
+      return { source, refund };
+    });
+    const result = await runCancellation();
+    await logAudit(req.user.id, 'transfer_cancel', `tx=${txId}`);
+    if (io) {
+      const updated = await db.prepare('SELECT balance FROM accounts WHERE id = ?').get(result.source.id);
+      io.to(`user:${result.source.user_id}`).emit('balance:update', { accountId: result.source.id, balance: updated.balance });
+      io.to(`user:${result.source.user_id}`).emit('transaction:notification', {
+        direction: 'outgoing', status: 'cancelled', amount: result.refund, message: 'Virement annulé et montant remboursé',
+      });
+    }
+    res.json({ message: 'Virement annulé et montant remboursé.' });
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.publicMessage });
     next(err);
@@ -243,4 +288,4 @@ async function logAudit(userId, action, details) {
   await db.prepare('INSERT INTO audit_logs (id, user_id, action, details) VALUES (?, ?, ?, ?)').run(uuidv4(), userId, action, details);
 }
 
-module.exports = { listTransactions, transfer, createScheduledPayment, listScheduledPayments, reviewTransaction };
+module.exports = { listTransactions, transfer, cancelTransfer, createScheduledPayment, listScheduledPayments, reviewTransaction };

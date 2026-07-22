@@ -33,12 +33,20 @@ export default function Accounts() {
     }
   }
 
+  async function cancelTransfer(txId) {
+    if (!window.confirm('Annuler ce virement en attente et rembourser le montant ?')) return;
+    await api.post(`/transactions/${txId}/cancel`);
+    await fetchAccounts();
+    const { data } = await api.get(`/transactions/account/${selectedAccountId}`);
+    setTransactions(data.transactions);
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-display font-semibold text-white">Vos comptes</h2>
-        <button onClick={() => setShowModal(true)} className="btn-secondary flex items-center gap-2 text-sm">
-          <Plus size={15} /> Nouveau compte
+        <button onClick={() => setShowModal(true)} className="btn-secondary !px-3 sm:!px-5 flex items-center gap-2 text-sm shrink-0">
+          <Plus size={15} /> <span className="hidden xs:inline">Nouveau compte</span><span className="xs:hidden">Nouveau</span>
         </button>
       </div>
 
@@ -62,12 +70,12 @@ export default function Accounts() {
         ))}
       </div>
 
-      <div className="panel p-6">
+      <div className="panel p-4 sm:p-6">
         <p className="text-sm font-medium text-white mb-2">Historique du compte sélectionné</p>
         {transactions.length === 0 ? (
           <p className="text-sm text-slate-250/40 py-6 text-center">Aucune transaction.</p>
         ) : (
-          <div>{transactions.map((tx) => <TransactionRow key={tx.id} tx={tx} />)}</div>
+          <div>{transactions.map((tx) => <TransactionRow key={tx.id} tx={tx} onCancel={cancelTransfer} />)}</div>
         )}
       </div>
 

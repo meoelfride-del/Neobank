@@ -78,7 +78,7 @@ export default function AdminBackoffice() {
         <StatCard icon={Landmark} label="Solde total" value={`${stats?.totalBalance?.toFixed(0) ?? 0} €`} />
       </div>
 
-      <div className="panel p-1.5 flex gap-1 w-fit">
+      <div className="panel p-1.5 flex gap-1 w-full sm:w-fit overflow-x-auto">
         <TabButton active={tab === 'users'} onClick={() => setTab('users')}>Utilisateurs</TabButton>
         <TabButton active={tab === 'fraud'} onClick={() => setTab('fraud')}>Transactions suspectes</TabButton>
       </div>
@@ -137,12 +137,12 @@ export default function AdminBackoffice() {
           {pendingTx.length === 0 ? (
             <p className="text-sm text-slate-250/40 text-center py-10">Aucune transaction en attente de revue.</p>
           ) : pendingTx.map((tx) => (
-            <div key={tx.id} className="flex items-center justify-between px-5 py-4 flex-wrap gap-2">
+            <div key={tx.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-4 gap-3">
               <div>
                 <p className="text-white text-sm font-medium">{tx.email}</p>
                 <p className="text-xs text-slate-250/40">{tx.libelle || tx.category} · vers {tx.destination_info}</p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto">
                 <span className="amount-mono text-sm text-coral-400">{Math.abs(tx.amount).toFixed(2)} €</span>
                 <button onClick={() => reviewTx(tx.id, true)} className="btn-secondary !py-1.5 !px-3 text-xs text-mint-400">Approuver</button>
                 <button onClick={() => reviewTx(tx.id, false)} className="btn-danger !py-1.5 !px-3 text-xs">Rejeter</button>
@@ -184,7 +184,7 @@ export default function AdminBackoffice() {
 function DialogShell({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" onMouseDown={onClose}>
-      <div className="panel w-full max-w-lg p-6" onMouseDown={(event) => event.stopPropagation()}>
+      <div className="panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display font-semibold text-white">{title}</h3>
           <button type="button" onClick={onClose} className="text-slate-250/50 hover:text-white"><X size={18} /></button>
@@ -207,7 +207,7 @@ function EditUserDialog({ user, onClose, onSave }) {
   return (
     <DialogShell title="Modifier le client" onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AdminInput label="Prénom" value={form.prenom} onChange={(value) => setForm({ ...form, prenom: value })} />
           <AdminInput label="Nom" value={form.nom} onChange={(value) => setForm({ ...form, nom: value })} />
         </div>
@@ -238,7 +238,7 @@ function FundsDialog({ user, accounts, onClose, onSubmit }) {
               {accounts.map((account) => <option key={account.id} value={account.id}>{account.label} — {Number(account.balance).toFixed(2)} {account.currency}</option>)}
             </select>
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="block text-xs text-slate-250/60">Opération
               <select className="input-field mt-1" value={form.operation} onChange={(e) => setForm({ ...form, operation: e.target.value })}>
                 <option value="credit">Ajouter des fonds</option>
