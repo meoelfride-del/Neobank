@@ -18,6 +18,12 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
+// Render termine HTTPS devant l'application et transmet l'IP du client dans
+// X-Forwarded-For. Une seule couche de proxy est attendue en production.
+if (process.env.RENDER || process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // --- Sécurité de base -------------------------------------------------
 app.use(helmet());
 app.use(cors({ origin: getClientOrigins(), credentials: true }));

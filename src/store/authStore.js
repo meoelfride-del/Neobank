@@ -33,7 +33,10 @@ const useAuthStore = create((set) => ({
       connectSocket();
       return { success: true, user: data.user };
     } catch (err) {
-      const message = err.response?.data?.error || 'Erreur de connexion.';
+      const message = err.response?.data?.error
+        || (err.code === 'ERR_NETWORK'
+          ? `API indisponible (${err.config?.baseURL || 'adresse inconnue'}).`
+          : 'Erreur de connexion.');
       set({ error: message, loading: false });
       return { success: false, error: message };
     }
