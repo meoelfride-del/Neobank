@@ -56,6 +56,17 @@ const schemas = {
   adminSuspendUser: Joi.object({
     suspended: Joi.boolean().required(),
   }),
+  adminUpdateUser: Joi.object({
+    nom: Joi.string().min(2).max(60).required(),
+    prenom: Joi.string().min(2).max(60).required(),
+    email: Joi.string().email({ tlds: { allow: false } }).required(),
+    phone: Joi.string().pattern(/^\+?[0-9]{8,15}$/).required(),
+  }),
+  adminBalanceAdjustment: Joi.object({
+    operation: Joi.string().valid('credit', 'debit').required(),
+    amount: Joi.number().positive().precision(2).max(1000000).required(),
+    reason: Joi.string().trim().min(3).max(140).required(),
+  }),
   adminTransactionReview: Joi.object({
     approve: Joi.boolean().required(),
   }),

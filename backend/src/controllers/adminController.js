@@ -49,6 +49,72 @@ async function validateKyc(req, res) {
   res.json({ message: `KYC ${decision === 'verified' ? 'validé' : 'rejeté'}.` });
 }
 
+async function updateUser(req, res, next) {
+  const { userId } = req.params;
+  const { nom, prenom, email, phone } = req.body;
+  const user = await db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+
+  try {
+    await db.prepare(`
+      UPDATE users SET nom = ?, prenom = ?, email = ?, phone = ? WHERE id = ?
+    `).run(nom, prenom, email.toLowerCase(), phone, userId);
+    await logAudit(req.user.id, 'user_update', `user=${userId}`);
+    const updatedUser = await db.prepare(`
+      SELECT id, nom, prenom, email, phone, role, status_kyc, status_compte, fraud_score, created_at
+      FROM users WHERE id = ?
+    `).get(userId);
+    res.json({ message: 'Coordonnées mises à jour.', user: updatedUser });
+  } catch (error) {
+    if (error.code === '23505') return res.status(409).json({ error: 'Cet email ou ce téléphone est déjà utilisé.' });
+    next(error);
+  }
+}
+
+async function listUserAccounts(req, res) {
+  const user = await db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.userId);
+  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+  const accounts = await db.prepare(`
+    SELECT id, user_id, type, currency, balance, iban, label, created_at
+    FROM accounts WHERE user_id = ? ORDER BY created_at ASC
+  `).all(req.params.userId);
+  res.json({ accounts });
+}
+
+async function adjustBalance(req, res, next) {
+  const { accountId } = req.params;
+  const { operation, amount, reason } = req.body;
+  const io = req.app.get('io');
+
+  try {
+    const runAdjustment = db.transaction(async () => {
+      const account = await db.prepare('SELECT * FROM accounts WHERE id = ? FOR UPDATE').get(accountId);
+      if (!account) throw httpError(404, 'Compte introuvable.');
+      const signedAmount = operation === 'credit' ? amount : -amount;
+      const newBalance = Number(account.balance) + signedAmount;
+      if (newBalance < 0) throw httpError(409, 'Solde insuffisant pour effectuer ce retrait.');
+
+      await db.prepare('UPDATE accounts SET balance = ? WHERE id = ?').run(newBalance, accountId);
+      await db.prepare(`
+        INSERT INTO transactions (id, source_account_id, destination_info, amount, type, category, status, libelle)
+        VALUES (?, ?, 'Ajustement administrateur', ?, 'depot', 'Administration', 'completed', ?)
+      `).run(uuidv4(), accountId, signedAmount, reason);
+      await logAudit(req.user.id, 'balance_adjustment', `account=${accountId} operation=${operation} amount=${amount} reason=${reason}`);
+      return { account, newBalance };
+    });
+
+    const result = await runAdjustment();
+    if (io) {
+      io.to(`user:${result.account.user_id}`).emit('balance:update', { accountId, balance: result.newBalance });
+      io.to(`user:${result.account.user_id}`).emit('transaction:new', { message: reason });
+    }
+    res.json({ message: 'Solde ajusté.', accountId, balance: result.newBalance });
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.publicMessage });
+    next(error);
+  }
+}
+
 async function suspendUser(req, res) {
   const { userId } = req.params;
   const { suspended } = req.body;
@@ -152,4 +218,14 @@ async function logAudit(userId, action, details) {
     .run(uuidv4(), userId, action, details);
 }
 
-module.exports = { listUsers, getStats, validateKyc, suspendUser, pendingTransactions, reviewTransaction };
+module.exports = {
+  listUsers,
+  getStats,
+  validateKyc,
+  updateUser,
+  listUserAccounts,
+  adjustBalance,
+  suspendUser,
+  pendingTransactions,
+  reviewTransaction,
+};

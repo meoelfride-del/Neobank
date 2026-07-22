@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, ShieldAlert, Ban, AlertTriangle, Check, X, Landmark } from 'lucide-react';
+import { Users, ShieldAlert, Ban, AlertTriangle, Check, X, Landmark, Pencil, WalletCards } from 'lucide-react';
 import api from '../services/api';
 
 export default function AdminBackoffice() {
@@ -7,6 +7,10 @@ export default function AdminBackoffice() {
   const [users, setUsers] = useState([]);
   const [pendingTx, setPendingTx] = useState([]);
   const [tab, setTab] = useState('users');
+  const [editingUser, setEditingUser] = useState(null);
+  const [fundUser, setFundUser] = useState(null);
+  const [accounts, setAccounts] = useState([]);
+  const [feedback, setFeedback] = useState(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -22,23 +26,49 @@ export default function AdminBackoffice() {
   }
 
   async function validateKyc(userId, decision) {
-    await api.post(`/admin/kyc/${userId}`, { decision });
-    loadAll();
+    await runAction(() => api.post(`/admin/kyc/${userId}`, { decision }), 'Statut KYC mis à jour.');
   }
 
   async function toggleSuspend(userId, suspended) {
-    await api.post(`/admin/users/${userId}/suspend`, { suspended });
-    loadAll();
+    await runAction(() => api.post(`/admin/users/${userId}/suspend`, { suspended }), 'Statut du compte mis à jour.');
   }
 
   async function reviewTx(txId, approve) {
-    await api.post(`/admin/transactions/${txId}/review`, { approve });
-    loadAll();
+    await runAction(() => api.post(`/admin/transactions/${txId}/review`, { approve }), 'Transaction traitée.');
+  }
+
+  async function runAction(action, successMessage) {
+    try {
+      setFeedback(null);
+      await action();
+      setFeedback({ type: 'success', text: successMessage });
+      await loadAll();
+      return true;
+    } catch (error) {
+      setFeedback({ type: 'error', text: error.response?.data?.error || 'Opération impossible.' });
+      return false;
+    }
+  }
+
+  async function openFunds(user) {
+    try {
+      const { data } = await api.get(`/admin/users/${user.id}/accounts`);
+      setAccounts(data.accounts);
+      setFundUser(user);
+    } catch (error) {
+      setFeedback({ type: 'error', text: error.response?.data?.error || 'Impossible de charger les comptes.' });
+    }
   }
 
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-display font-semibold text-white">Back-Office Administration</h2>
+
+      {feedback && (
+        <div className={`rounded-xl border px-4 py-3 text-sm ${feedback.type === 'success' ? 'border-mint-500/20 bg-mint-500/10 text-mint-400' : 'border-coral-500/20 bg-coral-500/10 text-coral-400'}`}>
+          {feedback.text}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard icon={Users} label="Utilisateurs" value={stats?.totalUsers} />
@@ -83,12 +113,10 @@ export default function AdminBackoffice() {
                   <td className="px-5 py-3 amount-mono text-slate-250/70">{u.fraud_score}</td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      {u.status_kyc === 'in_review' || u.status_kyc === 'pending' ? (
-                        <>
-                          <button onClick={() => validateKyc(u.id, 'verified')} className="text-mint-400 hover:bg-mint-500/10 p-1.5 rounded-lg" title="Valider KYC"><Check size={15} /></button>
-                          <button onClick={() => validateKyc(u.id, 'rejected')} className="text-coral-400 hover:bg-coral-500/10 p-1.5 rounded-lg" title="Rejeter KYC"><X size={15} /></button>
-                        </>
-                      ) : null}
+                      <button onClick={() => setEditingUser({ ...u })} className="text-slate-250/70 hover:bg-white/5 p-1.5 rounded-lg" title="Modifier les coordonnées"><Pencil size={15} /></button>
+                      <button onClick={() => openFunds(u)} className="text-gold-400 hover:bg-gold-500/10 p-1.5 rounded-lg" title="Ajuster les fonds"><WalletCards size={15} /></button>
+                      {u.status_kyc !== 'verified' && <button onClick={() => validateKyc(u.id, 'verified')} className="text-mint-400 hover:bg-mint-500/10 p-1.5 rounded-lg" title="Valider KYC"><Check size={15} /></button>}
+                      {u.status_kyc !== 'rejected' && <button onClick={() => validateKyc(u.id, 'rejected')} className="text-coral-400 hover:bg-coral-500/10 p-1.5 rounded-lg" title="Rejeter KYC"><X size={15} /></button>}
                       <button
                         onClick={() => toggleSuspend(u.id, u.status_compte === 'active')}
                         className={`text-xs px-2.5 py-1 rounded-lg border ${u.status_compte === 'active' ? 'border-coral-500/20 text-coral-400 hover:bg-coral-500/10' : 'border-mint-500/20 text-mint-400 hover:bg-mint-500/10'}`}
@@ -123,8 +151,112 @@ export default function AdminBackoffice() {
           ))}
         </div>
       )}
+
+      {editingUser && (
+        <EditUserDialog
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSave={async (payload) => {
+            const ok = await runAction(() => api.patch(`/admin/users/${editingUser.id}`, payload), 'Coordonnées mises à jour.');
+            if (ok) setEditingUser(null);
+          }}
+        />
+      )}
+
+      {fundUser && (
+        <FundsDialog
+          user={fundUser}
+          accounts={accounts}
+          onClose={() => setFundUser(null)}
+          onSubmit={async (accountId, payload) => {
+            const ok = await runAction(() => api.post(`/admin/accounts/${accountId}/adjust-balance`, payload), 'Solde ajusté avec succès.');
+            if (ok) {
+              const { data } = await api.get(`/admin/users/${fundUser.id}/accounts`);
+              setAccounts(data.accounts);
+            }
+          }}
+        />
+      )}
     </div>
   );
+}
+
+function DialogShell({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" onMouseDown={onClose}>
+      <div className="panel w-full max-w-lg p-6" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display font-semibold text-white">{title}</h3>
+          <button type="button" onClick={onClose} className="text-slate-250/50 hover:text-white"><X size={18} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function EditUserDialog({ user, onClose, onSave }) {
+  const [form, setForm] = useState({ nom: user.nom, prenom: user.prenom, email: user.email, phone: user.phone || '' });
+  const [saving, setSaving] = useState(false);
+  const submit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    await onSave(form);
+    setSaving(false);
+  };
+  return (
+    <DialogShell title="Modifier le client" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <AdminInput label="Prénom" value={form.prenom} onChange={(value) => setForm({ ...form, prenom: value })} />
+          <AdminInput label="Nom" value={form.nom} onChange={(value) => setForm({ ...form, nom: value })} />
+        </div>
+        <AdminInput label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} />
+        <AdminInput label="Téléphone" type="tel" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} />
+        <button disabled={saving} className="btn-primary w-full">{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+      </form>
+    </DialogShell>
+  );
+}
+
+function FundsDialog({ user, accounts, onClose, onSubmit }) {
+  const [form, setForm] = useState({ accountId: accounts[0]?.id || '', operation: 'credit', amount: '', reason: '' });
+  const [saving, setSaving] = useState(false);
+  const submit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    await onSubmit(form.accountId, { operation: form.operation, amount: Number(form.amount), reason: form.reason });
+    setForm((current) => ({ ...current, amount: '', reason: '' }));
+    setSaving(false);
+  };
+  return (
+    <DialogShell title={`Ajuster les fonds — ${user.prenom} ${user.nom}`} onClose={onClose}>
+      {accounts.length === 0 ? <p className="text-sm text-slate-250/60">Ce client ne possède aucun compte.</p> : (
+        <form onSubmit={submit} className="space-y-4">
+          <label className="block text-xs text-slate-250/60">Compte
+            <select className="input-field mt-1" value={form.accountId} onChange={(e) => setForm({ ...form, accountId: e.target.value })}>
+              {accounts.map((account) => <option key={account.id} value={account.id}>{account.label} — {Number(account.balance).toFixed(2)} {account.currency}</option>)}
+            </select>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-xs text-slate-250/60">Opération
+              <select className="input-field mt-1" value={form.operation} onChange={(e) => setForm({ ...form, operation: e.target.value })}>
+                <option value="credit">Ajouter des fonds</option>
+                <option value="debit">Soustraire des fonds</option>
+              </select>
+            </label>
+            <AdminInput label="Montant" type="number" min="0.01" step="0.01" value={form.amount} onChange={(value) => setForm({ ...form, amount: value })} />
+          </div>
+          <AdminInput label="Motif de l’ajustement" value={form.reason} onChange={(value) => setForm({ ...form, reason: value })} />
+          <button disabled={saving} className="btn-primary w-full">{saving ? 'Traitement…' : 'Confirmer l’ajustement'}</button>
+        </form>
+      )}
+    </DialogShell>
+  );
+}
+
+function AdminInput({ label, onChange, ...props }) {
+  return <label className="block text-xs text-slate-250/60">{label}<input required className="input-field mt-1" onChange={(e) => onChange(e.target.value)} {...props} /></label>;
 }
 
 function StatCard({ icon: Icon, label, value, accent }) {

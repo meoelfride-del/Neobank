@@ -305,6 +305,47 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
   assert.equal(kycStatus.status, 200);
   assert.equal(kycStatus.body.status_kyc, 'verified');
 
+  const adminAccounts = await request(`/admin/users/${recipientUser.id}/accounts`, { token: adminToken });
+  assert.equal(adminAccounts.status, 200);
+  assert.equal(adminAccounts.body.accounts.length, 1);
+  const managedAccount = adminAccounts.body.accounts[0];
+
+  const credited = await request(`/admin/accounts/${managedAccount.id}/adjust-balance`, {
+    token: adminToken,
+    method: 'POST',
+    body: { operation: 'credit', amount: 100.5, reason: 'Régularisation test' },
+  });
+  assert.equal(credited.status, 200);
+  assert.equal(credited.body.balance, 125.5);
+
+  const debited = await request(`/admin/accounts/${managedAccount.id}/adjust-balance`, {
+    token: adminToken,
+    method: 'POST',
+    body: { operation: 'debit', amount: 20.25, reason: 'Correction test' },
+  });
+  assert.equal(debited.status, 200);
+  assert.equal(debited.body.balance, 105.25);
+
+  const overdraft = await request(`/admin/accounts/${managedAccount.id}/adjust-balance`, {
+    token: adminToken,
+    method: 'POST',
+    body: { operation: 'debit', amount: 999, reason: 'Retrait excessif' },
+  });
+  assert.equal(overdraft.status, 409);
+
+  const updated = await request(`/admin/users/${recipientUser.id}`, {
+    token: adminToken,
+    method: 'PATCH',
+    body: {
+      nom: 'Client',
+      prenom: 'Modifié',
+      email: `updated-${recipient.email}`,
+      phone: `+228${String(process.pid).padStart(8, '0').slice(-8)}`,
+    },
+  });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.user.prenom, 'Modifié');
+
   const suspended = await request(`/admin/users/${recipientUser.id}/suspend`, {
     token: adminToken,
     method: 'POST',
