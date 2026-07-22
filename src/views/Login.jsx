@@ -11,7 +11,7 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     const res = await login(form.email, form.password, form.otp || undefined);
-    if (res.success) navigate('/dashboard');
+    if (res.success) navigate(res.user?.role === 'admin' ? '/admin' : '/dashboard');
   }
 
   return (

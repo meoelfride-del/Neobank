@@ -31,7 +31,7 @@ const useAuthStore = create((set) => ({
       localStorage.setItem('neobank_user', JSON.stringify(data.user));
       set({ user: data.user, isAuthenticated: true, loading: false });
       connectSocket();
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err) {
       const message = err.response?.data?.error || 'Erreur de connexion.';
       set({ error: message, loading: false });
