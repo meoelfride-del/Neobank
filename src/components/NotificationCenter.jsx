@@ -68,7 +68,9 @@ export default function NotificationCenter() {
       </button>
 
       {open && (
-        <div className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-[4.6rem] sm:top-auto sm:mt-2 sm:w-[24rem] panel z-50 overflow-hidden shadow-2xl">
+        <>
+        <button type="button" aria-label="Fermer les notifications" onClick={() => setOpen(false)} className="fixed inset-0 z-40 bg-black/75 backdrop-blur-[2px] sm:hidden" />
+        <div className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-[4.6rem] sm:top-auto sm:mt-2 sm:w-[24rem] panel !bg-ink-950 sm:!bg-ink-800 z-50 overflow-hidden shadow-2xl ring-1 ring-white/10">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
             <div><p className="text-sm font-semibold text-white">Notifications</p><p className="text-[11px] text-slate-250/40">{unreadCount} non lue{unreadCount > 1 ? 's' : ''}</p></div>
             {unreadCount > 0 && <button onClick={markAllRead} className="flex items-center gap-1 text-[11px] text-mint-400 hover:underline"><CheckCheck size={13} />Tout marquer comme lu</button>}
@@ -80,19 +82,20 @@ export default function NotificationCenter() {
             ) : notifications.length === 0 ? (
               <div className="py-10 text-center"><Bell size={24} className="mx-auto text-slate-250/20 mb-2" /><p className="text-xs text-slate-250/40">Aucun message pour le moment.</p></div>
             ) : notifications.map((notification) => (
-              <button key={notification.id} onClick={() => openNotification(notification)} className={`w-full text-left px-4 py-3 hover:bg-white/[0.035] transition-colors ${notification.read_at ? 'opacity-60' : ''}`}>
+              <button key={notification.id} onClick={() => openNotification(notification)} className={`w-full text-left px-4 py-3 hover:bg-white/[0.06] transition-colors ${notification.read_at ? 'bg-transparent' : 'bg-white/[0.045]'}`}>
                 <div className="flex items-start gap-3">
                   <div className={`w-8 h-8 rounded-lg grid place-items-center shrink-0 ${KIND_STYLES[notification.kind] || KIND_STYLES.info}`}><Bell size={14} /></div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2"><p className="text-xs font-semibold text-white">{notification.title}</p>{!notification.read_at && <span className="w-2 h-2 rounded-full bg-mint-400 shrink-0 mt-1" />}</div>
-                    <p className="text-xs text-slate-250/60 mt-1 leading-relaxed break-words">{notification.message}</p>
-                    <div className="flex items-center justify-between gap-2 mt-2"><span className="text-[10px] text-slate-250/30">{new Date(notification.created_at).toLocaleString('fr-FR')}</span>{notification.action_url && <span className="flex items-center gap-1 text-[10px] text-mint-400">Ouvrir <ExternalLink size={10} /></span>}</div>
+                    <p className="text-xs text-slate-250/80 mt-1 leading-relaxed break-words">{notification.message}</p>
+                    <div className="flex items-center justify-between gap-2 mt-2"><span className="text-[10px] text-slate-250/50">{new Date(notification.created_at).toLocaleString('fr-FR')}</span>{notification.action_url && <span className="flex items-center gap-1 text-[10px] text-mint-400">Ouvrir <ExternalLink size={10} /></span>}</div>
                   </div>
                 </div>
               </button>
             ))}
           </div>
         </div>
+        </>
       )}
     </div>
   );
