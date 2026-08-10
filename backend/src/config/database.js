@@ -144,7 +144,6 @@ async function initDatabase() {
       timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_tx_account_date ON transactions(source_account_id, timestamp DESC);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_idempotency ON transactions(source_account_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS refresh_sessions (
       id TEXT PRIMARY KEY,
@@ -221,4 +220,3 @@ async function close() {
 }
 
 module.exports = { prepare, transaction, initDatabase, close, pool };
-
