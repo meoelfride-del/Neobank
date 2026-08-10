@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/AppLayout';
+import { useTranslation } from 'react-i18next';
 
 const Login = lazy(() => import('./views/Login'));
 const Landing = lazy(() => import('./views/Landing'));
@@ -20,11 +21,12 @@ const NotFound = lazy(() => import('./views/NotFound'));
 const Legal = lazy(() => import('./views/Legal'));
 
 function RouteLoader() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen grid place-items-center bg-ink-950 text-slate-250">
       <div className="flex items-center gap-3 text-sm" role="status" aria-live="polite">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-mint-400/30 border-t-mint-400" />
-        Chargement…
+        {t('common.loading')}
       </div>
     </div>
   );
@@ -67,3 +69,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+

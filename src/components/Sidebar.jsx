@@ -4,18 +4,21 @@ import {
   ShieldCheck, LogOut, Landmark,
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from './LanguageSelector';
 
 const NAV_ITEMS = [
-  { to: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-  { to: '/accounts', label: 'Comptes', icon: Wallet },
-  { to: '/transfer', label: 'Virements', icon: ArrowLeftRight },
-  { to: '/cards', label: 'Cartes', icon: CreditCard },
-  { to: '/budget', label: 'Budget', icon: PieChart },
-  { to: '/chatbot', label: 'Assistant', icon: MessageCircle },
+  { to: '/dashboard', label: 'nav.dashboard', icon: LayoutDashboard },
+  { to: '/accounts', label: 'nav.accounts', icon: Wallet },
+  { to: '/transfer', label: 'nav.transfer', icon: ArrowLeftRight },
+  { to: '/cards', label: 'nav.cards', icon: CreditCard },
+  { to: '/budget', label: 'nav.budget', icon: PieChart },
+  { to: '/chatbot', label: 'nav.assistant', icon: MessageCircle },
 ];
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
+  const { t } = useTranslation();
 
   return (
     <div className="flex flex-col w-64 h-full px-4 py-6">
@@ -34,28 +37,30 @@ export default function Sidebar() {
             className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
           >
             <Icon size={18} strokeWidth={2} />
-            {label}
+            {t(label)}
           </NavLink>
         ))}
 
         {user?.role === 'admin' && (
           <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>
             <ShieldCheck size={18} strokeWidth={2} />
-            Back-Office
+            {t('nav.admin')}
           </NavLink>
         )}
       </nav>
 
       <div className="border-t border-white/5 pt-4 mt-4">
+        <div className="px-2 mb-4"><LanguageSelector /></div>
         <div className="px-2 mb-3">
           <p className="text-sm font-medium text-white truncate">{user?.prenom} {user?.nom}</p>
           <p className="text-xs text-slate-250/50 truncate">{user?.email}</p>
         </div>
         <button onClick={logout} className="nav-link w-full text-coral-400 hover:text-coral-400 hover:bg-coral-500/10">
           <LogOut size={18} strokeWidth={2} />
-          Déconnexion
+          {t('nav.logout')}
         </button>
       </div>
     </div>
   );
 }
+

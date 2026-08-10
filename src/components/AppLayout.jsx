@@ -6,15 +6,17 @@ import Navbar from './Navbar';
 import useAccountStore from '../store/accountStore';
 import useAuthStore from '../store/authStore';
 import { connectSocket } from '../services/socket';
+import { useTranslation } from 'react-i18next';
+import { formatCurrency } from '../i18n/locale';
 
 const TITLES = {
-  '/dashboard': 'Tableau de bord',
-  '/accounts': 'Comptes',
-  '/transfer': 'Virements',
-  '/cards': 'Cartes',
-  '/budget': 'Budget',
-  '/chatbot': 'Assistant',
-  '/admin': 'Back-Office',
+  '/dashboard': 'nav.dashboard',
+  '/accounts': 'nav.accounts',
+  '/transfer': 'nav.transfer',
+  '/cards': 'nav.cards',
+  '/budget': 'nav.budget',
+  '/chatbot': 'nav.assistant',
+  '/admin': 'nav.admin',
 };
 
 export default function AppLayout({ children }) {
@@ -24,6 +26,7 @@ export default function AppLayout({ children }) {
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -49,7 +52,7 @@ export default function AppLayout({ children }) {
     };
   }, [isAuthenticated, bindSocketListeners]);
 
-  const title = TITLES[location.pathname] || 'NeoBank';
+  const title = TITLES[location.pathname] ? t(TITLES[location.pathname]) : 'NeoBank';
 
   return (
     <div className="flex min-h-screen">
@@ -81,8 +84,8 @@ export default function AppLayout({ children }) {
             <div className="min-w-0 flex-1">
               {notification.title && <p className="text-sm font-semibold text-white">{notification.title}</p>}
               <p className={notification.title ? 'text-xs text-slate-250/70 mt-1' : 'text-sm font-medium text-white'}>{notification.message}</p>
-              {notification.action_url && <button onClick={() => navigate(notification.action_url)} className="text-xs text-mint-400 hover:underline mt-2">Ouvrir</button>}
-              {Number.isFinite(Number(notification.amount)) && <p className="amount-mono text-xs text-slate-250/60 mt-1">{Number(notification.amount).toFixed(2)} €</p>}
+              {notification.action_url && <button onClick={() => navigate(notification.action_url)} className="text-xs text-mint-400 hover:underline mt-2">{t('common.open')}</button>}
+              {Number.isFinite(Number(notification.amount)) && <p className="amount-mono text-xs text-slate-250/60 mt-1">{formatCurrency(notification.amount, notification.currency || 'EUR', i18n.language)}</p>}
             </div>
             <button onClick={() => setNotifications((items) => items.filter((item) => item.id !== notification.id))} className="text-slate-250/40"><X size={15} /></button>
           </div>
@@ -91,3 +94,4 @@ export default function AppLayout({ children }) {
     </div>
   );
 }
+

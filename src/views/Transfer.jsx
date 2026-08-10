@@ -20,13 +20,14 @@ export default function Transfer() {
     setSubmitting(true);
     setResult(null);
     try {
+      const idempotencyKey = crypto.randomUUID();
       const { data } = await api.post('/transactions/transfer', {
         source_account_id: selectedAccountId,
         destination_type: destType,
         destination_info: form.destination_info,
         amount: parseFloat(form.amount),
         libelle: form.libelle,
-      });
+      }, { headers: { 'Idempotency-Key': idempotencyKey } });
       setResult({ type: data.requiresApproval ? 'flagged' : 'success', message: data.message, transactionId: data.transactionId });
       setForm({ destination_info: '', amount: '', libelle: '' });
       await fetchAccounts();
@@ -166,3 +167,4 @@ export default function Transfer() {
     </div>
   );
 }
+

@@ -140,9 +140,22 @@ async function initDatabase() {
       category TEXT NOT NULL DEFAULT 'Autre',
       status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('pending','completed','failed')),
       libelle TEXT,
+      idempotency_key TEXT,
       timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_tx_account_date ON transactions(source_account_id, timestamp DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_idempotency ON transactions(source_account_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS refresh_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      revoked_at TIMESTAMPTZ,
+      replaced_by TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_refresh_sessions_user ON refresh_sessions(user_id, created_at DESC);
 
     CREATE TABLE IF NOT EXISTS transfer_challenges (
       transaction_id TEXT PRIMARY KEY REFERENCES transactions(id) ON DELETE CASCADE,
@@ -198,6 +211,9 @@ async function initDatabase() {
 
     INSERT INTO schema_migrations (version) VALUES (1) ON CONFLICT (version) DO NOTHING;
   `);
+
+  await pool.query('ALTER TABLE transactions ADD COLUMN IF NOT EXISTS idempotency_key TEXT');
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_idempotency ON transactions(source_account_id, idempotency_key) WHERE idempotency_key IS NOT NULL');
 }
 
 async function close() {
@@ -205,3 +221,4 @@ async function close() {
 }
 
 module.exports = { prepare, transaction, initDatabase, close, pool };
+

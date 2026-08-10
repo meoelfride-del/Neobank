@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const crypto = require('node:crypto');
 require('dotenv').config();
 const db = require('./config/database');
 const { getClientOrigins } = require('./config/clientOrigins');
@@ -19,6 +20,14 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  const supplied = req.get('X-Request-ID');
+  req.id = supplied && /^[A-Za-z0-9._:-]{8,128}$/.test(supplied) ? supplied : crypto.randomUUID();
+  res.setHeader('X-Request-ID', req.id);
+  next();
+});
+
 // Render termine HTTPS devant l'application et transmet l'IP du client dans
 // X-Forwarded-For. Une seule couche de proxy est attendue en production.
 if (process.env.RENDER || process.env.NODE_ENV === 'production') {
@@ -33,6 +42,7 @@ app.use(express.json({ limit: '1mb' }));
 // Limitation de débit globale, plus stricte sur l'authentification
 const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300 });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Trop de tentatives, réessayez plus tard.' } });
+const monitoringLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Trop de rapports.' } });
 app.use(globalLimiter);
 
 // --- Routes --------------------------------------------------------------
@@ -60,12 +70,18 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-app.post('/api/monitoring/client-error', (req, res) => {
+app.get('/api/ready', async (req, res) => {
+  await db.pool.query('SELECT 1');
+  res.json({ status: 'ready', uptimeSeconds: Math.floor(process.uptime()), timestamp: new Date().toISOString() });
+});
+
+app.post('/api/monitoring/client-error', monitoringLimiter, (req, res) => {
+  const clean = (value, limit) => String(value || '').replace(/[\r\n\u2028\u2029]/g, ' ').slice(0, limit);
   const report = {
-    name: String(req.body?.name || 'Error').slice(0, 80),
-    message: String(req.body?.message || 'Erreur inconnue').slice(0, 500),
-    componentStack: String(req.body?.componentStack || '').slice(0, 2000),
-    path: String(req.body?.path || '').slice(0, 300),
+    name: clean(req.body?.name || 'Error', 80),
+    message: clean(req.body?.message || 'Erreur inconnue', 500),
+    componentStack: clean(req.body?.componentStack, 2000),
+    path: clean(req.body?.path, 300),
     timestamp: new Date().toISOString(),
   };
   console.error('[client-error]', JSON.stringify(report));
@@ -85,3 +101,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;
+

@@ -27,17 +27,20 @@ const schemas = {
     password: Joi.string().required(),
     otp: Joi.string().length(6).optional(),
   }),
+  refreshSession: Joi.object({
+    refreshToken: Joi.string().min(20).max(4096).required(),
+  }),
   transfer: Joi.object({
     source_account_id: Joi.string().required(),
     destination_type: Joi.string().valid('iban', 'phone').required(),
     destination_info: Joi.string().required(),
-    amount: Joi.number().positive().max(1000000).required(),
+    amount: Joi.number().positive().precision(2).max(1000000).required(),
     libelle: Joi.string().max(140).allow('', null),
   }),
   scheduledPayment: Joi.object({
     account_id: Joi.string().required(),
     destination_info: Joi.string().required(),
-    amount: Joi.number().positive().required(),
+    amount: Joi.number().positive().precision(2).max(1000000).required(),
     label: Joi.string().max(140).required(),
     frequency: Joi.string().valid('mensuel', 'hebdomadaire').required(),
   }),
@@ -94,3 +97,4 @@ const schemas = {
 };
 
 module.exports = { validate, schemas };
+

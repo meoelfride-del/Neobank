@@ -69,7 +69,15 @@ const useAuthStore = create((set) => ({
     }
   },
 
-  logout() {
+  async logout() {
+    const refreshToken = localStorage.getItem('neobank_refresh_token');
+    if (refreshToken) {
+      try {
+        await api.post('/auth/logout', { refreshToken });
+      } catch {
+        // La déconnexion locale doit rester possible si l'API est indisponible.
+      }
+    }
     localStorage.removeItem('neobank_access_token');
     localStorage.removeItem('neobank_refresh_token');
     localStorage.removeItem('neobank_user');
@@ -88,3 +96,4 @@ window.addEventListener('neobank:session-expired', () => {
 });
 
 export default useAuthStore;
+

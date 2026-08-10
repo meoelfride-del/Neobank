@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Landmark, Loader2, ShieldCheck } from 'lucide-react';
 import useAuthStore from '../store/authStore';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../components/LanguageSelector';
 
 export default function Login() {
   const navigate = useNavigate();
   const { login, loading, error, mfaRequired, clearError } = useAuthStore();
   const [form, setForm] = useState({ email: '', password: '', otp: '' });
+  const { t } = useTranslation();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -17,6 +20,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
+        <div className="mb-4 flex justify-end"><LanguageSelector /></div>
         <Link to="/" aria-label="Retour à l’accueil" className="flex flex-col items-center mb-8 group">
           <div className="w-12 h-12 rounded-2xl bg-mint-500 flex items-center justify-center mb-3">
             <Landmark size={24} className="text-ink-950" strokeWidth={2.5} />
@@ -26,7 +30,7 @@ export default function Login() {
         </Link>
 
         <form onSubmit={handleSubmit} className="panel p-7 space-y-4">
-          <h2 className="text-lg font-display font-semibold text-white mb-1">Connexion</h2>
+          <h2 className="text-lg font-display font-semibold text-white mb-1">{t('auth.loginTitle')}</h2>
 
           {error && (
             <div className="bg-coral-500/10 border border-coral-500/20 text-coral-400 text-sm rounded-xl px-3.5 py-2.5">
@@ -43,7 +47,7 @@ export default function Login() {
           {!mfaRequired && (
             <>
               <div>
-                <label className="label-field">Adresse email</label>
+                <label className="label-field">{t('auth.email')}</label>
                 <input
                   type="email" required autoFocus
                   className="input-field"
@@ -53,7 +57,7 @@ export default function Login() {
                 />
               </div>
               <div>
-                <label className="label-field">Mot de passe</label>
+                <label className="label-field">{t('auth.password')}</label>
                 <input
                   type="password" required
                   className="input-field"
@@ -67,7 +71,7 @@ export default function Login() {
 
           {mfaRequired && (
             <div>
-              <label className="label-field">Code de vérification</label>
+              <label className="label-field">{t('auth.otp')}</label>
               <input
                 type="text" required autoFocus maxLength={6}
                 className="input-field text-center tracking-[0.5em] font-mono text-lg"
@@ -80,11 +84,11 @@ export default function Login() {
 
           <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
             {loading && <Loader2 size={16} className="animate-spin" />}
-            {mfaRequired ? 'Vérifier' : 'Se connecter'}
+            {t(mfaRequired ? 'auth.verify' : 'auth.login')}
           </button>
 
           <p className="text-center text-sm text-slate-250/50 pt-2">
-            Pas encore de compte ? <Link to="/register" className="text-mint-400 hover:underline">Ouvrir un compte</Link>
+            {t('auth.noAccount')} <Link to="/register" className="text-mint-400 hover:underline">{t('auth.openAccount')}</Link>
           </p>
         </form>
 
@@ -97,3 +101,4 @@ export default function Login() {
     </div>
   );
 }
+

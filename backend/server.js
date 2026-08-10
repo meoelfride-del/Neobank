@@ -53,10 +53,32 @@ async function startServer() {
 }
 
 if (require.main === module) {
-  startServer().catch((error) => {
-    console.error('[startup]', error);
-    process.exitCode = 1;
-  });
+  let runningServer;
+  let stopping = false;
+  const shutdown = async (signal) => {
+    if (stopping) return;
+    stopping = true;
+    console.log(`[shutdown] signal ${signal}, arrêt gracieux en cours`);
+    const forceExit = setTimeout(() => process.exit(1), 10_000);
+    forceExit.unref();
+    try {
+      if (runningServer) await runningServer.close();
+      clearTimeout(forceExit);
+      process.exit(0);
+    } catch (error) {
+      console.error('[shutdown]', error);
+      process.exit(1);
+    }
+  };
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
+  process.once('SIGINT', () => shutdown('SIGINT'));
+  startServer()
+    .then((instance) => { runningServer = instance; })
+    .catch((error) => {
+      console.error('[startup]', error);
+      process.exitCode = 1;
+    });
 }
 
 module.exports = { startServer };
+

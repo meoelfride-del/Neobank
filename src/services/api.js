@@ -36,6 +36,7 @@ apiClient.interceptors.response.use(
         .post(`${API_BASE_URL}/auth/refresh`, { refreshToken })
         .then(({ data }) => {
           localStorage.setItem('neobank_access_token', data.accessToken);
+          if (data.refreshToken) localStorage.setItem('neobank_refresh_token', data.refreshToken);
           return data.accessToken;
         })
         .finally(() => {
@@ -56,3 +57,4 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
+

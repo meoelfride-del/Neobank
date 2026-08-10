@@ -16,6 +16,8 @@ async function resolveDestinationAccount(destinationInfo) {
 
 async function listTransactions(req, res) {
   const { accountId } = req.params;
+  const limit = Math.min(Math.max(Number.parseInt(req.query.limit || '50', 10) || 50, 1), 100);
+  const offset = Math.max(Number.parseInt(req.query.offset || '0', 10) || 0, 0);
   const account = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
   if (!account) return res.status(404).json({ error: 'Compte introuvable.' });
   if (account.user_id !== req.user.id && req.user.role !== 'admin') {
@@ -30,9 +32,11 @@ async function listTransactions(req, res) {
       CASE WHEN c.transaction_id IS NOT NULL THEN TRUE ELSE FALSE END AS otp_required
     FROM transactions t
     LEFT JOIN transfer_challenges c ON c.transaction_id = t.id
-    WHERE t.source_account_id = ? ORDER BY t.timestamp DESC LIMIT 200
-  `).all(accountId);
-  res.json({ transactions });
+    WHERE t.source_account_id = ? ORDER BY t.timestamp DESC LIMIT ? OFFSET ?
+  `).all(accountId, limit + 1, offset);
+  const hasMore = transactions.length > limit;
+  if (hasMore) transactions.pop();
+  res.json({ transactions, pagination: { limit, offset, hasMore, nextOffset: hasMore ? offset + limit : null } });
 }
 
 /**
@@ -42,13 +46,22 @@ async function listTransactions(req, res) {
  */
 async function transfer(req, res, next) {
   const { source_account_id, destination_type, destination_info, amount, libelle } = req.body;
+  const idempotencyKey = req.get('Idempotency-Key');
   const io = req.app.get('io');
+
+  if (!idempotencyKey || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(idempotencyKey)) {
+    return res.status(400).json({ error: 'Une clé Idempotency-Key valide (8 à 128 caractères) est requise.' });
+  }
 
   try {
     const runTransfer = db.transaction(async () => {
       const source = await db.prepare('SELECT * FROM accounts WHERE id = ? FOR UPDATE').get(source_account_id);
       if (!source) throw httpError(404, 'Compte source introuvable.');
       if (source.user_id !== req.user.id) throw httpError(403, 'Ce compte ne vous appartient pas.');
+      const existing = await db.prepare('SELECT * FROM transactions WHERE source_account_id = ? AND idempotency_key = ?').get(source_account_id, idempotencyKey);
+      if (existing) {
+        return { txId: existing.id, updatedSource: source, destAccount: null, flagged: false, requiresApproval: existing.status === 'pending', replayed: true };
+      }
       if (source.balance < amount) throw httpError(400, 'Solde insuffisant.');
 
       const recentTxCount = (await db.prepare(`
@@ -80,9 +93,9 @@ async function transfer(req, res, next) {
       await db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(amount, source_account_id);
 
       await db.prepare(`
-        INSERT INTO transactions (id, source_account_id, destination_info, amount, type, category, status, libelle)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(txId, source_account_id, destination_info, -amount, txType, category, requiresApproval ? 'pending' : 'completed', libelle || '');
+        INSERT INTO transactions (id, source_account_id, destination_info, amount, type, category, status, libelle, idempotency_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(txId, source_account_id, destination_info, -amount, txType, category, requiresApproval ? 'pending' : 'completed', libelle || '', idempotencyKey);
 
       if (destAccount && !requiresApproval) {
         await db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(amount, destAccount.id);
@@ -101,7 +114,7 @@ async function transfer(req, res, next) {
     });
     const result = await runTransfer();
 
-    if (io) {
+    if (io && !result.replayed) {
       io.to(`user:${req.user.id}`).emit('balance:update', {
         accountId: result.updatedSource.id,
         balance: result.updatedSource.balance,
@@ -126,14 +139,17 @@ async function transfer(req, res, next) {
       }
     }
 
-    res.status(201).json({
-      message: result.flagged
+    res.status(result.replayed ? 200 : 201).json({
+      message: result.replayed
+        ? 'Cette demande a déjà été traitée.'
+        : result.flagged
         ? 'Virement en attente de validation manuelle (activité inhabituelle détectée).'
         : 'Virement enregistré. Un administrateur va générer votre code OTP avant validation.',
       transactionId: result.txId,
       newBalance: result.updatedSource.balance,
       flagged: result.flagged,
       requiresApproval: result.requiresApproval,
+      idempotentReplayed: Boolean(result.replayed),
     });
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.publicMessage });
@@ -333,3 +349,4 @@ async function logAudit(userId, action, details) {
 }
 
 module.exports = { listTransactions, transfer, cancelTransfer, verifyTransferOtp, createScheduledPayment, listScheduledPayments, reviewTransaction };
+

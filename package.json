@@ -8,15 +8,19 @@
     "dev:all": "node scripts/dev-all.cjs",
     "dev:all:force": "node scripts/dev-all.cjs --force",
     "build": "vite build && node scripts/generate-spa-routes.cjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test test/*.test.js",
+    "i18n:check": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.7.7",
+    "i18next": "^26.3.6",
     "lucide-react": "^0.446.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-i18next": "^17.0.11",
     "react-router-dom": "^6.26.2",
     "recharts": "^2.12.7",
     "socket.io-client": "^4.7.5",

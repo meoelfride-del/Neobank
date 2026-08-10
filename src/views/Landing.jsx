@@ -5,6 +5,7 @@ import {
   Globe2, Landmark, LockKeyhole, Menu, Send, ShieldCheck,
   Sparkles, WalletCards, X, Zap,
 } from 'lucide-react';
+import LanguageSelector from '../components/LanguageSelector';
 
 const productTabs = [
   {
@@ -77,6 +78,7 @@ export default function Landing() {
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
+            <LanguageSelector compact />
             <Link to="/login" className="rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-black/5">Se connecter</Link>
             <Link to="/register" className="rounded-xl bg-ink-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-ink-800">Ouvrir un compte</Link>
           </div>
@@ -89,6 +91,9 @@ export default function Landing() {
         {menuOpen && (
           <div className="mx-auto mt-2 max-w-7xl rounded-2xl border border-black/5 bg-white p-4 shadow-xl md:hidden">
             <div className="grid gap-1 text-sm font-medium">
+              <div className="mb-2 flex items-center justify-between rounded-xl bg-black/5 px-4 py-2">
+                <LanguageSelector />
+              </div>
               {[['Produits', '#produits'], ['Transferts', '#transferts'], ['Sécurité', '#securite'], ['Aide', '#faq']].map(([label, href]) => (
                 <a key={href} href={href} onClick={closeMenu} className="rounded-xl px-4 py-3 hover:bg-black/5">{label}</a>
               ))}

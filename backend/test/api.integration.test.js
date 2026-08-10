@@ -26,12 +26,14 @@ let adminToken;
 let sourceAccount;
 let recipient;
 
-async function request(route, { token, method = 'GET', body } = {}) {
+async function request(route, { token, method = 'GET', body, headers = {} } = {}) {
   const response = await fetch(`${BASE_URL}${route}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(route === '/transactions/transfer' ? { 'Idempotency-Key': crypto.randomUUID() } : {}),
+      ...headers,
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
@@ -57,6 +59,10 @@ test('health check et protection des routes', async () => {
   const health = await request('/health');
   assert.equal(health.status, 200);
   assert.equal(health.body.status, 'ok');
+
+  const readinessResponse = await fetch(`${BASE_URL}/ready`, { headers: { 'X-Request-ID': 'integration-test-request' } });
+  assert.equal(readinessResponse.status, 200);
+  assert.equal(readinessResponse.headers.get('x-request-id'), 'integration-test-request');
 
   const protectedRoute = await request('/accounts');
   assert.equal(protectedRoute.status, 401);
@@ -110,6 +116,13 @@ test('connexion client et lecture du profil', async () => {
   });
   assert.equal(refreshed.status, 200);
   assert.ok(refreshed.body.accessToken);
+  assert.ok(refreshed.body.refreshToken);
+
+  const replayedRefresh = await request('/auth/refresh', {
+    method: 'POST',
+    body: { refreshToken: login.body.refreshToken },
+  });
+  assert.equal(replayedRefresh.status, 401);
 
   const me = await request('/auth/me', { token: clientToken });
   assert.equal(me.status, 200);
@@ -229,20 +242,41 @@ test('inscription, KYC et virement interne dynamique', async () => {
   const forbidden = await request(`/accounts/${sourceAccount.id}`, { token: recipient.token });
   assert.equal(forbidden.status, 403);
 
+  const idempotencyKey = crypto.randomUUID();
+  const transferPayload = {
+    source_account_id: sourceAccount.id,
+    destination_type: 'phone',
+    destination_info: phone,
+    amount: 25,
+    libelle: 'Remboursement test',
+  };
   const transfer = await request('/transactions/transfer', {
     token: clientToken,
     method: 'POST',
-    body: {
-      source_account_id: sourceAccount.id,
-      destination_type: 'phone',
-      destination_info: phone,
-      amount: 25,
-      libelle: 'Remboursement test',
-    },
+    body: transferPayload,
+    headers: { 'Idempotency-Key': idempotencyKey },
   });
   assert.equal(transfer.status, 201);
   assert.equal(transfer.body.flagged, false);
   assert.equal(transfer.body.requiresApproval, true);
+
+  const missingIdempotency = await request('/transactions/transfer', {
+    token: clientToken,
+    method: 'POST',
+    body: transferPayload,
+    headers: { 'Idempotency-Key': '' },
+  });
+  assert.equal(missingIdempotency.status, 400);
+
+  const duplicateTransfer = await request('/transactions/transfer', {
+    token: clientToken,
+    method: 'POST',
+    body: transferPayload,
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+  assert.equal(duplicateTransfer.status, 200);
+  assert.equal(duplicateTransfer.body.transactionId, transfer.body.transactionId);
+  assert.equal(duplicateTransfer.body.idempotentReplayed, true);
 
   const transferOtp = await request(`/admin/transactions/${transfer.body.transactionId}/otp`, {
     token: adminToken,
@@ -533,3 +567,4 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
   const denied = await request('/accounts', { token: recipient.token });
   assert.equal(denied.status, 403);
 });
+
