@@ -198,6 +198,33 @@ process.on('SIGTERM', () => shutdown(0));
   );
 
   if (!backendRunning || forceMode) {
+    const backendEnv = { ...process.env };
+    require(path.join(backendDir, 'node_modules', 'dotenv')).config({
+      path: path.join(backendDir, '.env'),
+      processEnv: backendEnv,
+    });
+    const missing = ['DATABASE_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'ENCRYPTION_KEY']
+      .filter((name) => !backendEnv[name]?.trim());
+    if (missing.length) {
+      console.error(`[dev-all] API non démarrée : configuration manquante (${missing.join(', ')}).`);
+      console.error('[dev-all] Configurez backend/.env avec votre base PostgreSQL locale et vos clés, puis relancez npm run dev:all.');
+      console.error('[dev-all] Le frontend seul ne permet pas de créer un compte. Voir REGISTRATION_INCIDENT.md.');
+      process.exitCode = 1;
+      return;
+    }
+    const localData = path.join(backendDir, '.local-postgres', 'data');
+    const databaseUrl = new URL(backendEnv.DATABASE_URL);
+    if (databaseUrl.hostname === '127.0.0.1' && databaseUrl.port === '5433'
+      && require('node:fs').existsSync(path.join(localData, 'PG_VERSION'))) {
+      const pgCtl = path.join(process.env.NEOBANK_PG_BIN || 'C:/Program Files/PostgreSQL/18/bin', 'pg_ctl.exe');
+      const options = { windowsHide: true, stdio: 'ignore' };
+      const status = spawnSync(pgCtl, ['-D', localData, 'status'], options);
+      if (status.status !== 0) {
+        const started = spawnSync(pgCtl, ['-D', localData, '-l', path.join(backendDir, '.local-postgres', 'postgres.log'), '-w', 'start'], options);
+        if (started.error || started.status !== 0) throw new Error('Démarrage PostgreSQL local impossible. Consultez backend/.local-postgres/postgres.log.');
+        console.log('[dev-all] PostgreSQL local démarré sur le port 5433.');
+      }
+    }
     backendProcess = startBackend();
   }
 

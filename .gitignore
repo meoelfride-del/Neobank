@@ -11,3 +11,4 @@ dist/
 *.sqlite-wal
 *.zip
 .vercel/
+.local-postgres/

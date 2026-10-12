@@ -52,7 +52,7 @@ export default function AppLayout({ children }) {
     };
   }, [isAuthenticated, bindSocketListeners]);
 
-  const title = TITLES[location.pathname] ? t(TITLES[location.pathname]) : 'NeoBank';
+  const title = TITLES[location.pathname] ? t(TITLES[location.pathname]) : 'NEO BANK';
 
   return (
     <div className="flex min-h-screen">

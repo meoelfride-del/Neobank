@@ -3,6 +3,8 @@ import { Users, ShieldAlert, Ban, AlertTriangle, Check, X, Landmark, Pencil, Wal
 import api from '../services/api';
 import { getSocket } from '../services/socket';
 import TransactionRow from '../components/TransactionRow';
+import KycReviewDialog from '../components/KycReviewDialog';
+import BankingDialog from '../components/BankingDialog';
 
 export default function AdminBackoffice() {
   const [stats, setStats] = useState(null);
@@ -17,33 +19,63 @@ export default function AdminBackoffice() {
   const [notifyUser, setNotifyUser] = useState(null);
   const [clientDetail, setClientDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [kycUser, setKycUser] = useState(null);
+  const [bankUser, setBankUser] = useState(null);
+  const [kycFilter, setKycFilter] = useState('in_review');
+  const [sms, setSms] = useState({ enabled: false, messages: [] });
+  const [smsDiagnostic, setSmsDiagnostic] = useState(null);
+  const [checkingSms, setCheckingSms] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
 
   useEffect(() => {
     const socket = getSocket();
     const refreshOtpStatus = () => loadAll();
-    socket.on('transaction:otp-verified', refreshOtpStatus);
-    return () => socket.off('transaction:otp-verified', refreshOtpStatus);
+    const events = ['transaction:otp-verified', 'transaction:otp-required', 'kyc:updated', 'user:registered', 'user:updated'];
+    events.forEach(event => socket.on(event, refreshOtpStatus));
+    window.addEventListener('focus', refreshOtpStatus);
+    return () => { events.forEach(event => socket.off(event, refreshOtpStatus)); window.removeEventListener('focus', refreshOtpStatus); };
   }, []);
 
+  useEffect(() => {
+    if (tab !== 'sms') return;
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      api.get('/admin/sms').then(({ data }) => setSms(data)).catch(() => setFeedback({ type: 'error', text: 'Suivi SMS temporairement indisponible.' }));
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [tab]);
+
   async function loadAll() {
-    const [s, u, t] = await Promise.all([
+    try {
+    const [s, u, t, smsResult] = await Promise.all([
       api.get('/admin/stats'),
       api.get('/admin/users'),
       api.get('/admin/transactions/pending'),
+      api.get('/admin/sms'),
     ]);
     setStats(s.data);
     setUsers(u.data.users);
     setPendingTx(t.data.transactions);
-  }
-
-  async function validateKyc(userId, decision) {
-    await runAction(() => api.post(`/admin/kyc/${userId}`, { decision }), 'Statut KYC mis à jour.');
+    setSms(smsResult.data);
+    } catch {
+      setFeedback({ type: 'error', text: 'Impossible de charger le backoffice. Réessayez ou vérifiez la connexion à l’API.' });
+    }
   }
 
   async function toggleSuspend(userId, suspended) {
     await runAction(() => api.post(`/admin/users/${userId}/suspend`, { suspended }), 'Statut du compte mis à jour.');
+  }
+
+  async function checkSmsConnection() {
+    setCheckingSms(true);
+    setSmsDiagnostic(null);
+    try {
+      const { data } = await api.get('/admin/sms/diagnostics');
+      setSmsDiagnostic(data);
+    } catch {
+      setSmsDiagnostic({ state: 'error', message: 'Impossible de joindre l’API pour vérifier TextBee.' });
+    } finally { setCheckingSms(false); }
   }
 
   async function reviewTx(txId, approve) {
@@ -53,8 +85,8 @@ export default function AdminBackoffice() {
   async function runAction(action, successMessage) {
     try {
       setFeedback(null);
-      await action();
-      setFeedback({ type: 'success', text: successMessage });
+      const result = await action();
+      setFeedback({ type: 'success', text: result?.data?.message || successMessage });
       await loadAll();
       return true;
     } catch (error) {
@@ -105,11 +137,26 @@ export default function AdminBackoffice() {
       </div>
 
       <div className="panel p-1.5 flex gap-1 w-full sm:w-fit overflow-x-auto">
-        <TabButton active={tab === 'users'} onClick={() => setTab('users')}>Utilisateurs</TabButton>
-        <TabButton active={tab === 'fraud'} onClick={() => setTab('fraud')}>Transactions suspectes</TabButton>
+        <TabButton active={tab === 'users'} onClick={() => setTab('users')}><Users size={16} aria-hidden="true" />Utilisateurs</TabButton>
+        <TabButton active={tab === 'kyc'} onClick={() => setTab('kyc')}><ShieldAlert size={16} aria-hidden="true" />Dossiers KYC</TabButton>
+        <TabButton active={tab === 'fraud'} onClick={() => setTab('fraud')}><KeyRound size={16} aria-hidden="true" />Opérations sortantes / OTP</TabButton>
+        <TabButton active={tab === 'sms'} onClick={() => setTab('sms')}><Bell size={16} aria-hidden="true" />Suivi SMS</TabButton>
       </div>
 
-      {tab === 'users' && (
+      {tab === 'sms' && <section className="panel p-5 space-y-4">
+        {sms.provider === 'textbee' && <div className="rounded-xl border border-white/10 p-4 space-y-3">
+          <h3 className="text-white font-semibold">Connexion du téléphone TextBee</h3>
+          <p className="text-sm text-slate-250/60">Associez votre Android dans TextBee, renseignez la clé API et le Device ID dans la configuration locale, puis redémarrez l’API. Ce contrôle ne transmet aucun SMS.</p>
+          <button type="button" disabled={checkingSms} className="btn-secondary disabled:opacity-50" onClick={checkSmsConnection}>{checkingSms ? 'Vérification…' : 'Vérifier la connexion TextBee'}</button>
+          {smsDiagnostic && <div role="status" className={`text-sm ${smsDiagnostic.state === 'connected' ? 'text-mint-400' : 'text-gold-400'}`}><p>{smsDiagnostic.message}</p>{smsDiagnostic.missing?.length > 0 && <p className="mt-1">Paramètres manquants : {smsDiagnostic.missing.join(', ')}</p>}</div>}
+        </div>}
+        <div className="flex items-center justify-between gap-3"><h3 className="font-semibold text-white">Notifications SMS</h3><button type="button" className="btn-secondary" onClick={loadAll}>Actualiser</button></div>
+        <p className="text-sm text-slate-250/60">Prestataire : {sms.provider === 'textbee' ? 'TextBee' : 'Twilio'}. {sms.enabled ? 'Envoi activé. Les messages acceptés restent en attente de confirmation de livraison.' : 'Envoi désactivé : configurez les accès du prestataire pour envoyer les messages en attente.'}</p>
+        {sms.messages.length === 0 ? <EmptyText>Aucun SMS enregistré.</EmptyText> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-slate-250/50"><th className="py-2">Client</th><th>Statut</th><th>Date</th><th>Diagnostic</th></tr></thead><tbody>{sms.messages.map(message => <tr key={message.id} className="border-t border-white/5"><td className="py-3 text-white">{message.prenom} {message.nom}</td><td className="text-slate-250">{({ pending: 'En attente', processing: 'En cours', accepted: 'Accepté par le prestataire', delivered: 'Livré', failed: 'Échec', uncertain: 'À vérifier chez le prestataire', invalid_phone: 'Téléphone international requis' })[message.status] || message.status}</td><td className="text-slate-250/60">{new Date(message.created_at).toLocaleString('fr-FR')}</td><td className="text-slate-250/60">{message.error_code || '—'}</td></tr>)}</tbody></table></div>}
+      </section>}
+
+      {tab === 'kyc' && <label className="label-field block max-w-sm">Filtrer les dossiers<select className="input-field mt-1" value={kycFilter} onChange={event => setKycFilter(event.target.value)}><option value="in_review">En cours de revue</option><option value="pending">À compléter</option><option value="verified">Validés</option><option value="rejected">Refusés</option><option value="all">Tous les dossiers</option></select></label>}
+      {(tab === 'users' || tab === 'kyc') && (
         <div className="panel overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -122,7 +169,8 @@ export default function AdminBackoffice() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {tab === 'kyc' && !users.some(u => kycFilter === 'all' || u.status_kyc === kycFilter) && <tr><td colSpan={5} className="p-5 text-center text-slate-250/70">Aucun dossier pour ce statut.</td></tr>}
+              {users.filter(u => tab !== 'kyc' || kycFilter === 'all' || u.status_kyc === kycFilter).map((u) => (
                 <tr key={u.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
                   <td className="px-5 py-3">
                     <p className="text-white font-medium">{u.prenom} {u.nom}</p>
@@ -143,8 +191,8 @@ export default function AdminBackoffice() {
                       <button onClick={() => setNotifyUser(u)} className="text-mint-400 hover:bg-mint-500/10 p-1.5 rounded-lg" title="Notifier le client"><Bell size={15} /></button>
                       <button disabled={detailLoading} onClick={() => openClientDetail(u)} className="text-white hover:bg-white/10 p-1.5 rounded-lg disabled:opacity-40" title="Visualiser le compte client"><Eye size={15} /></button>
                       <button onClick={() => openFunds(u)} className="text-gold-400 hover:bg-gold-500/10 p-1.5 rounded-lg" title="Ajuster les fonds"><WalletCards size={15} /></button>
-                      {u.status_kyc !== 'verified' && <button onClick={() => validateKyc(u.id, 'verified')} className="text-mint-400 hover:bg-mint-500/10 p-1.5 rounded-lg" title="Valider KYC"><Check size={15} /></button>}
-                      {u.status_kyc !== 'rejected' && <button onClick={() => validateKyc(u.id, 'rejected')} className="text-coral-400 hover:bg-coral-500/10 p-1.5 rounded-lg" title="Rejeter KYC"><X size={15} /></button>}
+                      <button onClick={() => setBankUser(u)} className="inline-flex items-center gap-1 text-xs text-mint-400 p-1.5 rounded-lg hover:bg-white/5"><Landmark size={15} aria-hidden="true" />IBAN et cartes</button>
+                      <button onClick={() => setKycUser(u)} className="inline-flex items-center gap-1 text-mint-400 hover:bg-mint-500/10 p-1.5 rounded-lg text-xs"><ShieldAlert size={15} aria-hidden="true" />Examiner KYC</button>
                       <button
                         onClick={() => toggleSuspend(u.id, u.status_compte === 'active')}
                         className={`text-xs px-2.5 py-1 rounded-lg border ${u.status_compte === 'active' ? 'border-coral-500/20 text-coral-400 hover:bg-coral-500/10' : 'border-mint-500/20 text-mint-400 hover:bg-mint-500/10'}`}
@@ -182,6 +230,8 @@ export default function AdminBackoffice() {
       )}
 
       {clientDetail && <ClientDetailDialog detail={clientDetail} onClose={() => setClientDetail(null)} />}
+      {kycUser && <KycReviewDialog user={kycUser} onClose={() => setKycUser(null)} onReviewed={loadAll} />}
+      {bankUser && <BankingDialog user={bankUser} onClose={() => setBankUser(null)} onSaved={loadAll} />}
 
       {otpTransaction && (
         <OtpDialog transaction={otpTransaction} onClose={() => setOtpTransaction(null)} onGenerated={loadAll} />
@@ -228,7 +278,7 @@ export default function AdminBackoffice() {
 }
 
 function ClientDetailDialog({ detail, onClose }) {
-  const { user, accounts, transactions, notifications, summary } = detail;
+  const { user, profile, document, accounts, transactions, notifications, summary } = detail;
   return (
     <DialogShell title={`Compte client — ${user.prenom} ${user.nom}`} onClose={onClose} wide>
       <div className="space-y-5">
@@ -237,7 +287,14 @@ function ClientDetailDialog({ detail, onClose }) {
           <DetailItem label="Téléphone" value={user.phone || 'Non renseigné'} />
           <DetailItem label="KYC" value={user.status_kyc} />
           <DetailItem label="État du compte" value={user.status_compte} />
+          <DetailItem label="Inscription" value={new Date(user.created_at).toLocaleString('fr-FR')} />
         </div>
+        <section><h4 className="flex items-center gap-2 text-sm font-medium text-white mb-3"><Users size={16} aria-hidden="true" />Informations d’inscription</h4>
+          {profile ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+            {[['Date de naissance', profile.birth_date], ['Lieu de naissance', profile.birth_place], ['Nationalité', profile.nationality], ['Adresse', profile.address_line], ['Ville', profile.city], ['Code postal', profile.postal_code], ['Pays', profile.country], ['Profession', profile.occupation], ['Conditions acceptées le', profile.terms_accepted_at ? new Date(profile.terms_accepted_at).toLocaleString('fr-FR') : 'Non enregistré']].map(([label, value]) => <DetailItem key={label} label={label} value={value || 'Non renseigné'} />)}
+          </div> : <EmptyText>Profil d’inscription non renseigné.</EmptyText>}
+          <p className="mt-3 text-xs text-slate-250/60">Document KYC : {document ? `${document.document_type} — déposé le ${new Date(document.uploaded_at).toLocaleString('fr-FR')}` : 'Non déposé'}. La photo est consultable et téléchargeable depuis « Examiner KYC ».</p>
+        </section>
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <MiniStat label="Solde total" value={`${Number(summary.totalBalance).toFixed(2)} €`} />
           <MiniStat label="Comptes" value={summary.accountCount} />
@@ -461,7 +518,7 @@ function StatCard({ icon: Icon, label, value, accent }) {
 
 function TabButton({ active, onClick, children }) {
   return (
-    <button onClick={onClick} className={`px-4 py-2 rounded-xl text-sm transition-colors ${active ? 'bg-mint-500/10 text-mint-400' : 'text-slate-250/60 hover:bg-white/5'}`}>
+    <button onClick={onClick} className={`inline-flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-xl text-sm transition-colors ${active ? 'bg-mint-500/10 text-mint-400' : 'text-slate-250/60 hover:bg-white/5'}`}>
       {children}
     </button>
   );

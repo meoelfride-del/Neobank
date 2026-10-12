@@ -4,6 +4,7 @@ import useAccountStore from '../store/accountStore';
 import useAuthStore from '../store/authStore';
 import NotificationCenter from './NotificationCenter';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 export default function Navbar({ title, onMenuClick }) {
   const { accounts, selectedAccountId, selectAccount } = useAccountStore();
@@ -34,6 +35,7 @@ export default function Navbar({ title, onMenuClick }) {
         )}
 
         <NotificationCenter />
+        <Link to="/security" className="text-xs text-mint-400">Sécurité</Link>
 
         {accounts.length > 0 && (
           <div className="relative">

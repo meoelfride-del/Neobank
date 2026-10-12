@@ -25,7 +25,7 @@ export default function Login() {
           <div className="w-12 h-12 rounded-2xl bg-mint-500 flex items-center justify-center mb-3">
             <Landmark size={24} className="text-ink-950" strokeWidth={2.5} />
           </div>
-          <h1 className="text-2xl font-display font-semibold text-white group-hover:text-mint-400 transition-colors">NeoBank</h1>
+          <h1 className="text-2xl font-display font-semibold text-white group-hover:text-mint-400 transition-colors">NEO BANK</h1>
           <p className="text-sm text-slate-250/50 mt-1">Votre argent, en temps réel.</p>
         </Link>
 
@@ -92,11 +92,6 @@ export default function Login() {
           </p>
         </form>
 
-        {import.meta.env.DEV && (
-          <p className="text-center text-xs text-slate-250/30 mt-6">
-            Démo : client@neobank.demo / Client123! · admin@neobank.demo / Admin123!
-          </p>
-        )}
       </div>
     </div>
   );

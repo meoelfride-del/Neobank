@@ -26,7 +26,7 @@ export default function Sidebar() {
         <div className="w-9 h-9 rounded-xl bg-mint-500 flex items-center justify-center">
           <Landmark size={18} className="text-ink-950" strokeWidth={2.5} />
         </div>
-        <span className="font-display font-semibold text-lg text-white tracking-tight">NeoBank</span>
+        <span className="font-display font-semibold text-lg text-white tracking-tight">NEO BANK</span>
       </div>
 
       <nav className="flex-1 space-y-1">

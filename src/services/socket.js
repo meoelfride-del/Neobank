@@ -29,4 +29,10 @@ export function disconnectSocket() {
   socket.disconnect();
 }
 
+export function reconnectSocket() {
+  setSocketAuth();
+  socket.disconnect();
+  socket.connect();
+}
+
 export default socket;

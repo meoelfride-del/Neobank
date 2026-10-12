@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import { registrationError } from '../services/registrationError';
 import { connectSocket, disconnectSocket } from '../services/socket';
 
 function getStoredUser() {
@@ -51,9 +52,9 @@ const useAuthStore = create((set) => ({
       localStorage.setItem('neobank_user', JSON.stringify(data.user));
       set({ user: data.user, isAuthenticated: true, loading: false });
       connectSocket();
-      return { success: true, mfaSetup: data.mfaSetup };
+      return { success: true };
     } catch (err) {
-      const message = err.response?.data?.details?.join(' ') || err.response?.data?.error || "Erreur lors de l'inscription.";
+      const message = registrationError(err);
       set({ error: message, loading: false });
       return { success: false, error: message };
     }

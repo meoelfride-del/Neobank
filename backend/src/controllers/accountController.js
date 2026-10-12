@@ -1,6 +1,5 @@
 const { v4: uuid } = require('uuid');
 const db = require('../config/database');
-const { generateIban } = require('../services/cryptoService');
 const kycService = require('../services/kycService');
 
 async function listAccounts(req, res) {
@@ -14,8 +13,8 @@ async function createAccount(req, res, next) {
     const id = uuid();
     await db.prepare(`
       INSERT INTO accounts (id, user_id, type, currency, balance, iban, label)
-      VALUES (?, ?, ?, ?, 0, ?, ?)
-    `).run(id, req.user.id, type, currency, generateIban(), label);
+      VALUES (?, ?, ?, ?, 0, NULL, ?)
+    `).run(id, req.user.id, type, currency, label);
 
     const account = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
     res.status(201).json({ account });
@@ -39,6 +38,7 @@ async function getAccount(req, res) {
 
 async function submitKyc(req, res) {
   const result = await kycService.submitKyc(req.user.id);
+  req.app.get('io')?.to('role:admin').emit('kyc:updated', { userId: req.user.id, status: result.status });
   res.json(result);
 }
 

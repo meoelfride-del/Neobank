@@ -1,10 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       screens: {
-        xs: '400px',
+        xs: '25rem',
       },
       colors: {
         ink: {
@@ -38,8 +37,13 @@ export default {
         mono: ['"IBM Plex Mono"', 'monospace'],
       },
       boxShadow: {
+        // Conserver l'ombre utilisée par les écrans avant la migration Tailwind 4.
+        sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
         card: '0 20px 50px -20px rgba(0,0,0,0.6)',
         glow: '0 0 0 1px rgba(60,240,197,0.15), 0 0 30px -5px rgba(60,240,197,0.25)',
+      },
+      backdropBlur: {
+        sm: '4px',
       },
       backgroundImage: {
         'card-gradient': 'linear-gradient(135deg, #1B2434 0%, #0B0F17 60%, #16E0B022 100%)',

@@ -6,6 +6,11 @@ const db = require('./database');
 const { generateIban } = require('../services/cryptoService');
 
 async function seed() {
+  const isolatedTest = process.env.NODE_ENV === 'test' && process.env.DATABASE_URL === 'pg-mem://';
+  const explicitDevelopment = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEMO_SEED === 'true';
+  if (!isolatedTest && !explicitDevelopment) {
+    throw new Error('Seed de démonstration interdit : utilisez une base de test pg-mem ou un environnement development dédié avec ENABLE_DEMO_SEED=true.');
+  }
   await db.initDatabase();
   const existingAdmin = await db.prepare('SELECT id FROM users WHERE email = ?').get('admin@neobank.demo');
 
@@ -13,7 +18,7 @@ async function seed() {
     const passwordHash = await bcrypt.hash('Admin123!', 12);
     await db.prepare(`
       INSERT INTO users (id, nom, prenom, email, password_hash, phone, role, status_kyc, status_compte)
-      VALUES (?, 'Admin', 'NeoBank', 'admin@neobank.demo', ?, '+33600000000', 'admin', 'verified', 'active')
+      VALUES (?, 'Admin', 'NEO BANK', 'admin@neobank.demo', ?, '+33600000000', 'admin', 'verified', 'active')
     `).run(uuid(), passwordHash);
     console.log('✔ Admin créé : admin@neobank.demo / Admin123!');
   }

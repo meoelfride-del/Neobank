@@ -1,0 +1,11 @@
+backend/
+audit/
+test/
+node_modules/
+.env
+.env.*
+!.env.example
+.local-postgres/
+*.log
+*.zip
+*.md

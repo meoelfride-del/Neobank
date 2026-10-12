@@ -61,6 +61,8 @@ const useAccountStore = create((set, get) => ({
     socket.on('balance:update', ({ accountId, balance }) => {
       get().applyBalanceUpdate(accountId, balance);
     });
+    socket.off('accounts:updated');
+    socket.on('accounts:updated', () => get().fetchAccounts());
   },
 }));
 

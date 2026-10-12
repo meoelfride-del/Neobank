@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../config/runtime';
+import { reconnectSocket } from './socket';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -21,7 +22,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const isAuthRoute = originalRequest?.url?.startsWith('/auth/');
+    const isAuthRoute = originalRequest?.url?.startsWith('/auth/') && !['/auth/me', '/auth/sessions'].includes(originalRequest.url) && error.response?.data?.code !== 'SESSION_INVALID';
+    if (error.response?.status === 403 && error.response?.data?.code === 'KYC_REQUIRED') {
+      window.dispatchEvent(new CustomEvent('neobank:kyc-changed', { detail: error.response.data.status_kyc }));
+    }
 
     if (error.response?.status !== 401 || originalRequest?._retry || isAuthRoute) {
       return Promise.reject(error);
@@ -37,6 +41,7 @@ apiClient.interceptors.response.use(
         .then(({ data }) => {
           localStorage.setItem('neobank_access_token', data.accessToken);
           if (data.refreshToken) localStorage.setItem('neobank_refresh_token', data.refreshToken);
+          reconnectSocket();
           return data.accessToken;
         })
         .finally(() => {

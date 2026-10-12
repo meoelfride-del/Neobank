@@ -10,6 +10,7 @@ process.env.PORT = String(PORT);
 process.env.SOCKET_PORT = String(PORT);
 process.env.CLIENT_URL = 'http://localhost:5173';
 process.env.DATABASE_URL = 'pg-mem://';
+process.env.KYC_DEMO_AUTO_APPROVE = 'false';
 process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
 process.env.JWT_REFRESH_SECRET = crypto.randomBytes(32).toString('hex');
 process.env.ENCRYPTION_KEY = crypto.randomBytes(32).toString('hex');
@@ -25,6 +26,13 @@ let clientToken;
 let adminToken;
 let sourceAccount;
 let recipient;
+const syntheticProfile = { birth_date: '1990-01-01', birth_place: 'Ville Test', nationality: 'Test', address_line: '12 rue Test', city: 'Ville Test', country: 'Pays Test', postal_code: '', occupation: '' };
+async function uploadPhoto(token) {
+  const bytes = await require('sharp')({ create: { width: 20, height: 20, channels: 3, background: '#123456' } }).jpeg().toBuffer();
+  const form = new FormData(); form.append('document_type', 'identity_card'); form.append('document', new Blob([bytes], { type: 'image/jpeg' }), 'synthetic.jpg');
+  const response = await fetch(BASE_URL + '/accounts/kyc/document', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+  const data = await response.json(); assert.equal(response.status, 201, JSON.stringify(data)); return data.documentId;
+}
 
 async function request(route, { token, method = 'GET', body, headers = {} } = {}) {
   const response = await fetch(`${BASE_URL}${route}`, {
@@ -116,6 +124,8 @@ test('connexion client et lecture du profil', async () => {
   });
   assert.equal(refreshed.status, 200);
   assert.ok(refreshed.body.accessToken);
+  assert.equal((await request('/auth/me', { token: clientToken })).status, 401);
+  clientToken = refreshed.body.accessToken;
   assert.ok(refreshed.body.refreshToken);
 
   const replayedRefresh = await request('/auth/refresh', {
@@ -165,8 +175,10 @@ test('création, masquage, révélation et blocage de carte', async () => {
     body: { account_id: sourceAccount.id, type: 'Virtuelle', pin: '1234' },
   });
   assert.equal(created.status, 201);
-  assert.match(created.body.card.fullNumber, /^\d{16}$/);
-  const cardId = created.body.card.id;
+  assert.equal(created.body.request.status, 'pending');
+  const assigned = await request('/admin/accounts/' + sourceAccount.id + '/cards', { token: adminToken, method: 'POST', body: { number: '4111111111111111', type: 'Virtuelle', expiry: '12/' + (new Date().getFullYear() + 3), limits: 500, requestId: created.body.request.id } });
+  assert.equal(assigned.status, 201, JSON.stringify(assigned.body));
+  const cardId = assigned.body.card.id;
 
   const cards = await request(`/cards/account/${sourceAccount.id}`, { token: clientToken });
   assert.equal(cards.status, 200);
@@ -201,7 +213,7 @@ test('inscription, KYC et virement interne dynamique', async () => {
   const phone = `+229${String(process.pid).padStart(8, '0').slice(-8)}`;
   const registration = await request('/auth/register', {
     method: 'POST',
-    body: { nom: 'Test', prenom: 'Recipient', email, password: 'StrongPass123!', phone },
+    body: { nom: 'Test', prenom: 'Recipient', email, password: 'StrongPass123!', phone, ...syntheticProfile, accept_terms: true },
   });
   assert.equal(registration.status, 201);
   recipient = {
@@ -209,7 +221,6 @@ test('inscription, KYC et virement interne dynamique', async () => {
     phone,
     email,
     password: 'StrongPass123!',
-    mfaSecret: registration.body.mfaSetup.secret,
   };
 
   const blockedBeforeKyc = await request('/accounts', { token: recipient.token });
@@ -224,17 +235,32 @@ test('inscription, KYC et virement interne dynamique', async () => {
   assert.equal(adminClientDetail.body.user.email, email);
   assert.equal(adminClientDetail.body.accounts.length, 1);
   const recipientAccount = adminClientDetail.body.accounts[0];
+  assert.equal(recipientAccount.iban, null);
+  assert.equal((await request('/admin/accounts/' + recipientAccount.id + '/iban', { token: adminToken, method: 'PATCH', body: { iban: 'DE89370400440532013000', version: recipientAccount.iban_version } })).status, 200);
 
+  recipient.documentId = await uploadPhoto(recipient.token);
   const kyc = await request('/accounts/kyc/submit', { token: recipient.token, method: 'POST' });
   assert.equal(kyc.status, 200);
   assert.equal(kyc.body.status, 'in_review');
+  const rejectedKyc = await request(`/admin/kyc/${newRecipientUser.id}`, {
+    token: adminToken, method: 'POST', body: { decision: 'rejected', documentId: recipient.documentId, reason: 'Photo synth?tique ? remplacer' },
+  });
+  assert.equal(rejectedKyc.status, 200);
+  const resubmission = await request('/accounts/kyc/submit', { token: recipient.token, method: 'POST' });
+  assert.equal(resubmission.body.status, 'rejected');
+  const rejectedAccess = await request('/accounts', { token: recipient.token });
+  assert.equal(rejectedAccess.status, 403);
 
+  recipient.documentId = await uploadPhoto(recipient.token);
+  await request('/accounts/kyc/submit', { token: recipient.token, method: 'POST' });
   const adminKycApproval = await request(`/admin/kyc/${newRecipientUser.id}`, {
     token: adminToken,
     method: 'POST',
-    body: { decision: 'verified' },
+    body: { decision: 'verified', documentId: recipient.documentId },
   });
   assert.equal(adminKycApproval.status, 200);
+  const approvedResubmission = await request('/accounts/kyc/submit', { token: recipient.token, method: 'POST' });
+  assert.equal(approvedResubmission.body.status, 'verified');
 
   const recipientAccounts = await request('/accounts', { token: recipient.token });
   assert.equal(recipientAccounts.status, 200);
@@ -310,10 +336,23 @@ test('inscription, KYC et virement interne dynamique', async () => {
   const credited = await request(`/accounts/${recipientAccount.id}`, { token: recipient.token });
   assert.equal(credited.status, 200);
   assert.equal(credited.body.account.balance, 25);
+  const registrationDetail = await request(`/admin/users/${newRecipientUser.id}/detail`, { token: adminToken });
+  assert.equal(registrationDetail.status, 200);
+  assert.equal(registrationDetail.body.profile.birth_place, syntheticProfile.birth_place);
+  assert.ok(registrationDetail.body.profile.terms_accepted_at);
+  assert.ok(registrationDetail.body.document.id);
+  assert.equal(registrationDetail.body.document.payload_encrypted, undefined);
+  assert.equal(registrationDetail.body.user.password_hash, undefined);
+  assert.ok(await require('../src/config/database').prepare('SELECT id FROM sms_outbox WHERE event_key=?').get('kyc:' + recipient.documentId));
 
+  const setupMfa = await request('/auth/mfa/setup', { token: recipient.token, method: 'POST', body: { password: recipient.password } });
+  assert.equal(setupMfa.status, 200);
+  recipient.mfaSecret = setupMfa.body.mfaSetup.secret;
+  const usedMfaCode = authenticator.generate(recipient.mfaSecret);
   const enabledMfa = await request('/auth/mfa/enable', {
     token: recipient.token,
     method: 'POST',
+    body: { password: recipient.password, otp: usedMfaCode },
   });
   assert.equal(enabledMfa.status, 200);
 
@@ -324,14 +363,24 @@ test('inscription, KYC et virement interne dynamique', async () => {
   assert.equal(missingOtp.status, 206);
   assert.equal(missingOtp.body.mfaRequired, true);
 
-  const otpLogin = await request('/auth/login', {
+  const initialEpoch = Date.now();
+  const nextEpoch = initialEpoch + 30000;
+  const initialCode = usedMfaCode;
+  const reused = await request('/auth/login', { method: 'POST', body: { email: recipient.email, password: recipient.password, otp: initialCode } });
+  assert.equal(reused.status, 401);
+  const originalNow = Date.now;
+  Date.now = () => nextEpoch;
+  const nextMfaCode = authenticator.generate(recipient.mfaSecret);
+  let otpLogin;
+  try { otpLogin = await request('/auth/login', {
     method: 'POST',
     body: {
       email: recipient.email,
       password: recipient.password,
-      otp: authenticator.generate(recipient.mfaSecret),
+      otp: nextMfaCode,
     },
   });
+  } finally { Date.now = originalNow; }
   assert.equal(otpLogin.status, 200);
 });
 
@@ -388,7 +437,7 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
     body: {
       source_account_id: sourceAccount.id,
       destination_type: 'iban',
-      destination_info: 'FR7611111111111111111111111',
+      destination_info: 'GB82WEST12345698765432',
       amount: 6000,
       libelle: 'Virement à contrôler',
     },
@@ -413,7 +462,7 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
     body: {
       source_account_id: sourceAccount.id,
       destination_type: 'iban',
-      destination_info: 'FR7622222222222222222222222',
+      destination_info: 'GB82WEST12345698765432',
       amount: 6000,
       libelle: 'Virement protégé OTP',
     },
@@ -501,7 +550,7 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
   const verifiedKyc = await request(`/admin/kyc/${recipientUser.id}`, {
     token: adminToken,
     method: 'POST',
-    body: { decision: 'verified' },
+    body: { decision: 'verified', documentId: recipient.documentId },
   });
   assert.equal(verifiedKyc.status, 200);
 
@@ -535,7 +584,12 @@ test('administration et suspension bloquent les nouvelles sessions', async () =>
     body: { operation: 'debit', amount: 20.25, reason: 'Correction test' },
   });
   assert.equal(debited.status, 200);
-  assert.equal(debited.body.balance, 105.25);
+  assert.equal(debited.body.balance, 125.5);
+  const debitOtp = await request('/admin/transactions/' + debited.body.transactionId + '/otp', { token: adminToken, method: 'POST', body: { message: 'Confirmation de la correction de solde', expiresInMinutes: 15 } });
+  assert.equal(debitOtp.status, 201);
+  assert.equal((await request('/transactions/' + debited.body.transactionId + '/verify-otp', { token: recipient.token, method: 'POST', body: { otp: debitOtp.body.otp } })).status, 200);
+  assert.equal((await request('/admin/transactions/' + debited.body.transactionId + '/review', { token: adminToken, method: 'POST', body: { approve: true } })).status, 200);
+  assert.equal((await request('/admin/users/' + recipientUser.id + '/accounts', { token: adminToken })).body.accounts[0].balance, 105.25);
 
   const overdraft = await request(`/admin/accounts/${managedAccount.id}/adjust-balance`, {
     token: adminToken,

@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/AppLayout';
 import { useTranslation } from 'react-i18next';
+import useAuthStore from './store/authStore';
 
 const Login = lazy(() => import('./views/Login'));
 const Landing = lazy(() => import('./views/Landing'));
@@ -19,6 +20,7 @@ const Chatbot = lazy(() => import('./views/Chatbot'));
 const AdminBackoffice = lazy(() => import('./views/AdminBackoffice'));
 const NotFound = lazy(() => import('./views/NotFound'));
 const Legal = lazy(() => import('./views/Legal'));
+const Security = lazy(() => import('./views/Security'));
 
 function RouteLoader() {
   const { t } = useTranslation();
@@ -41,6 +43,17 @@ function Protected({ children, adminOnly }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    function updateKyc(event) {
+      const { user } = useAuthStore.getState();
+      if (!user || user.role === 'admin') return;
+      const next = { ...user, status_kyc: event.detail };
+      localStorage.setItem('neobank_user', JSON.stringify(next));
+      useAuthStore.setState({ user: next });
+    }
+    window.addEventListener('neobank:kyc-changed', updateKyc);
+    return () => window.removeEventListener('neobank:kyc-changed', updateKyc);
+  }, []);
   return (
     <BrowserRouter>
       <Suspense fallback={<RouteLoader />}>
@@ -60,11 +73,12 @@ export default function App() {
           <Route path="/budget" element={<Protected><Budget /></Protected>} />
           <Route path="/chatbot" element={<Protected><Chatbot /></Protected>} />
           <Route path="/admin" element={<Protected adminOnly><AdminBackoffice /></Protected>} />
+          <Route path="/security" element={<Protected><Security /></Protected>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
-      <Analytics beforeSend={(event) => /\/(dashboard|accounts|transfer|cards|budget|chatbot|admin|onboarding)(\/|$)/.test(new URL(event.url, window.location.origin).pathname) ? null : event} />
+      <Analytics beforeSend={(event) => /\/(dashboard|accounts|transfer|cards|budget|chatbot|admin|onboarding|security)(\/|$)/.test(new URL(event.url, window.location.origin).pathname) ? null : event} />
       <SpeedInsights />
     </BrowserRouter>
   );

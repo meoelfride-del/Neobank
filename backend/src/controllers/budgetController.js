@@ -10,7 +10,7 @@ async function getBudgetSummary(req, res) {
 
   const transactions = await db.prepare(`
     SELECT * FROM transactions
-    WHERE source_account_id = ? AND timestamp > ?
+    WHERE source_account_id = ? AND status = 'completed' AND timestamp > ?
   `).all(accountId, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
 
   // Seuils d'alerte par défaut (paramétrables ultérieurement en base)

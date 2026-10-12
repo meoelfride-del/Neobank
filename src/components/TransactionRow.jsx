@@ -112,7 +112,7 @@ export default function TransactionRow({ tx, onCancel, onVerifyOtp }) {
 
           {tx.status === 'pending' && onCancel && (
             <button type="button" onClick={() => onCancel(tx.id)} className="btn-danger !py-2 !px-3 text-xs">
-              Annuler ce virement et récupérer les fonds
+              Annuler cette opération
             </button>
           )}
         </div>

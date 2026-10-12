@@ -24,7 +24,7 @@ export default function CardVisual({ card, holderName, revealedNumber, onClick, 
       <div className="flex items-start justify-between relative z-10">
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-white/50 font-medium">{card.type === 'Virtuelle' ? 'Carte Virtuelle' : 'Carte Physique'}</p>
-          <p className="text-sm font-display font-semibold text-white mt-0.5">NeoBank</p>
+          <p className="text-sm font-display font-semibold text-white mt-0.5">NEO BANK</p>
         </div>
         <Wifi size={20} className="text-white/60 rotate-90" />
       </div>

@@ -16,7 +16,7 @@ function createPool() {
   }
 
   if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL est obligatoire pour démarrer NeoBank.');
+    throw new Error('DATABASE_URL est obligatoire pour démarrer NEO BANK.');
   }
 
   return new Pool({
@@ -111,11 +111,37 @@ async function initDatabase() {
       type TEXT NOT NULL CHECK(type IN ('Courant','Epargne')),
       currency TEXT NOT NULL DEFAULT 'EUR' CHECK(currency IN ('EUR','USD','GBP')),
       balance NUMERIC(18,2) NOT NULL DEFAULT 0 CHECK(balance >= 0),
-      iban TEXT NOT NULL UNIQUE,
+      iban TEXT UNIQUE,
       label TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id);
+
+    CREATE TABLE IF NOT EXISTS customer_profiles (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      birth_date TEXT NOT NULL,
+      birth_place TEXT NOT NULL,
+      nationality TEXT NOT NULL,
+      address_line TEXT NOT NULL,
+      city TEXT NOT NULL,
+      postal_code TEXT NOT NULL DEFAULT '',
+      country TEXT NOT NULL,
+      occupation TEXT NOT NULL DEFAULT '',
+      terms_accepted_at TIMESTAMPTZ
+    );
+
+    CREATE TABLE IF NOT EXISTS kyc_documents (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      document_type TEXT NOT NULL CHECK(document_type IN ('identity_card','passport','residence_permit')),
+      mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
+      byte_size INTEGER NOT NULL CHECK(byte_size > 0),
+      payload_encrypted TEXT NOT NULL,
+      uploaded_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      review_reason TEXT,
+      reviewed_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      reviewed_at TIMESTAMPTZ
+    );
 
     CREATE TABLE IF NOT EXISTS cards (
       id TEXT PRIMARY KEY,
@@ -209,10 +235,43 @@ async function initDatabase() {
     );
 
     INSERT INTO schema_migrations (version) VALUES (1) ON CONFLICT (version) DO NOTHING;
+    INSERT INTO schema_migrations (version) VALUES (2) ON CONFLICT (version) DO NOTHING;
   `);
 
   await pool.query('ALTER TABLE transactions ADD COLUMN IF NOT EXISTS idempotency_key TEXT');
+  await pool.query('ALTER TABLE accounts ALTER COLUMN iban DROP NOT NULL');
+  await pool.query('ALTER TABLE transactions ADD COLUMN IF NOT EXISTS debit_applied BOOLEAN NOT NULL DEFAULT TRUE');
+  await pool.query('ALTER TABLE transactions ADD COLUMN IF NOT EXISTS destination_account_id TEXT REFERENCES accounts(id)');
+  await pool.query('ALTER TABLE cards ADD COLUMN IF NOT EXISTS number_fingerprint TEXT');
+  await pool.query('ALTER TABLE cards ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1');
+  await pool.query('ALTER TABLE cards ADD COLUMN IF NOT EXISTS admin_locked BOOLEAN NOT NULL DEFAULT FALSE');
+  await pool.query('ALTER TABLE accounts ADD COLUMN IF NOT EXISTS iban_version INTEGER NOT NULL DEFAULT 0');
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_cards_fingerprint ON cards(number_fingerprint) WHERE number_fingerprint IS NOT NULL');
+  await pool.query(`CREATE TABLE IF NOT EXISTS card_requests (
+    id TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK(type IN ('Physique','Virtuelle')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','assigned','rejected')),
+    card_id TEXT REFERENCES cards(id), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ); INSERT INTO schema_migrations(version) VALUES(4) ON CONFLICT(version) DO NOTHING;`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS mfa_setups (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    secret_encrypted TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL
+  ); CREATE TABLE IF NOT EXISTS mfa_used_steps (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    step BIGINT NOT NULL, PRIMARY KEY(user_id, step)
+  ); INSERT INTO schema_migrations (version) VALUES (3) ON CONFLICT (version) DO NOTHING;`);
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_idempotency ON transactions(source_account_id, idempotency_key) WHERE idempotency_key IS NOT NULL');
+  await pool.query(`CREATE TABLE IF NOT EXISTS sms_outbox (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event_key TEXT NOT NULL UNIQUE, recipient TEXT NOT NULL, message TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+    provider_sid TEXT, error_code TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ); INSERT INTO schema_migrations(version) VALUES(5) ON CONFLICT(version) DO NOTHING;`);
+  await pool.query("ALTER TABLE sms_outbox ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'twilio'");
+  await pool.query('ALTER TABLE sms_outbox ADD COLUMN IF NOT EXISTS provider_device_id TEXT');
+  await pool.query('ALTER TABLE sms_outbox ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ');
+  await pool.query('INSERT INTO schema_migrations(version) VALUES(6) ON CONFLICT(version) DO NOTHING');
 }
 
 async function close() {

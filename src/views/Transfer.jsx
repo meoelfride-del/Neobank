@@ -59,11 +59,12 @@ export default function Transfer() {
 
   return (
     <div className="max-w-xl mx-auto space-y-5">
-      <h2 className="text-lg font-display font-semibold text-white">Effectuer un virement</h2>
+      <h2 className="text-lg font-display font-semibold text-white">Demander un virement</h2>
+      <p className="text-sm text-slate-250/70">Chaque opération sortante exige un code OTP fourni par l’administrateur avec un message. Aucun montant n’est débité avant votre confirmation et la validation finale.</p>
 
       <div className="panel p-1.5 grid grid-cols-1 xs:grid-cols-2 gap-1">
         <button onClick={() => { setMode('instant'); setResult(null); }} className={`flex-1 flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl transition-colors ${mode === 'instant' ? 'bg-mint-500/10 text-mint-400' : 'text-slate-250/60 hover:bg-white/5'}`}>
-          <Send size={15} /> Virement instantané
+          <Send size={15} /> Virement
         </button>
         <button onClick={() => { setMode('scheduled'); setResult(null); }} className={`flex-1 flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl transition-colors ${mode === 'scheduled' ? 'bg-mint-500/10 text-mint-400' : 'text-slate-250/60 hover:bg-white/5'}`}>
           <Clock size={15} /> Prélèvement planifié
@@ -131,7 +132,7 @@ export default function Transfer() {
 
           <button type="submit" disabled={submitting || !selectedAccountId} className="btn-primary w-full flex items-center justify-center gap-2">
             {submitting && <Loader2 size={16} className="animate-spin" />}
-            Envoyer maintenant
+            Enregistrer la demande
           </button>
         </form>
       ) : (
@@ -157,7 +158,7 @@ export default function Transfer() {
               </select>
             </div>
           </div>
-          <p className="text-xs text-slate-250/40">Signature électronique du mandat SEPA validée automatiquement à la soumission.</p>
+          <p className="text-xs text-slate-250/70">Chaque échéance créera une opération en attente. Un nouvel OTP et votre confirmation seront nécessaires avant chaque débit.</p>
           <button type="submit" disabled={submitting || !selectedAccountId} className="btn-primary w-full flex items-center justify-center gap-2">
             {submitting && <Loader2 size={16} className="animate-spin" />}
             Programmer le prélèvement

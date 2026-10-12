@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const { verifyAccess } = require('../services/sessionService');
 
 async function authenticate(req, res, next) {
   const header = req.headers.authorization;
@@ -9,7 +10,7 @@ async function authenticate(req, res, next) {
 
   const token = header.split(' ')[1];
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = await verifyAccess(token);
     const user = await db.prepare('SELECT id, email, role, status_compte, status_kyc FROM users WHERE id = ?').get(payload.sub);
 
     if (!user) return res.status(401).json({ error: 'Utilisateur introuvable.' });
@@ -18,9 +19,10 @@ async function authenticate(req, res, next) {
     }
 
     req.user = user;
+    req.sessionId = payload.sid;
     next();
   } catch (err) {
-    return res.status(401).json({ error: 'Token invalide ou expiré.' });
+    return res.status(401).json({ error: 'Token invalide ou expiré.', code: 'SESSION_INVALID' });
   }
 }
 

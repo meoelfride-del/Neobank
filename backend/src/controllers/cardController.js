@@ -1,10 +1,10 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuid } = require('uuid');
 const db = require('../config/database');
-const { encrypt, decrypt, generateCardNumber } = require('../services/cryptoService');
+const { decrypt } = require('../services/cryptoService');
 
 function maskCard(card) {
-  const { number_encrypted, pin_hash, ...safe } = card;
+  const { number_encrypted, pin_hash, number_fingerprint, ...safe } = card;
   return { ...safe, display: `•••• •••• •••• ${card.last4}` };
 }
 
@@ -17,38 +17,18 @@ async function listCards(req, res) {
   }
 
   const cards = await db.prepare('SELECT * FROM cards WHERE account_id = ?').all(accountId);
-  res.json({ cards: cards.map(maskCard) });
+  const requests=await db.prepare('SELECT id,type,status,created_at FROM card_requests WHERE account_id=? ORDER BY created_at DESC').all(accountId);
+  res.json({ cards: cards.map(maskCard), requests });
 }
 
-async function createCard(req, res, next) {
-  try {
-    const { account_id, type, limits, pin } = req.body;
-    const account = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(account_id);
-    if (!account || account.user_id !== req.user.id) {
-      return res.status(403).json({ error: 'Ce compte ne vous appartient pas.' });
-    }
-
-    const cardNumber = generateCardNumber(type === 'Virtuelle' ? '5412' : '4970');
-    const last4 = cardNumber.slice(-4);
-    const pinHash = await bcrypt.hash(pin || '0000', 10);
-
-    // Cartes virtuelles : validité courte (24h) et plafond strict par défaut
-    const expiryDate = new Date();
-    expiryDate.setMonth(expiryDate.getMonth() + (type === 'Virtuelle' ? 0 : 48));
-    if (type === 'Virtuelle') expiryDate.setDate(expiryDate.getDate() + 1);
-    const expiry = `${String(expiryDate.getMonth() + 1).padStart(2, '0')}/${expiryDate.getFullYear()}`;
-
-    const id = uuid();
-    await db.prepare(`
-      INSERT INTO cards (id, account_id, type, number_encrypted, last4, pin_hash, expiry, limits, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active')
-    `).run(id, account_id, type, encrypt(cardNumber), last4, pinHash, expiry, limits || (type === 'Virtuelle' ? 500 : 3000));
-
-    const card = await db.prepare('SELECT * FROM cards WHERE id = ?').get(id);
-    res.status(201).json({ card: { ...maskCard(card), fullNumber: type === 'Virtuelle' ? cardNumber : undefined } });
-  } catch (err) {
-    next(err);
-  }
+async function createCard(req, res) {
+  const { account_id, type } = req.body;
+  const account = await db.prepare('SELECT * FROM accounts WHERE id=?').get(account_id);
+  if (!account || account.user_id !== req.user.id) return res.status(403).json({ error: 'Acces refuse.' });
+  const existing = await db.prepare("SELECT * FROM card_requests WHERE account_id=? AND type=? AND status='pending'").get(account_id,type);
+  if (existing) return res.status(200).json({request:existing,message:'Demande deja en attente.'});
+  const id=uuid();await db.prepare('INSERT INTO card_requests(id,account_id,type) VALUES(?,?,?)').run(id,account_id,type);
+  res.status(201).json({request:{id,account_id,type,status:'pending'},message:'Demande enregistree. Attribution par un administrateur.'});
 }
 
 async function toggleCard(req, res) {
@@ -64,7 +44,10 @@ async function toggleCard(req, res) {
   if (!card) return res.status(404).json({ error: 'Carte introuvable.' });
   if (card.user_id !== req.user.id) return res.status(403).json({ error: 'Cette carte ne vous appartient pas.' });
 
-  await db.prepare('UPDATE cards SET status = ? WHERE id = ?').run(status, cardId);
+  const [month, year] = card.expiry.split('/').map(Number);
+  if (status === 'Active' && (card.status === 'Expired' || new Date(year, month, 1).getTime() <= Date.now())) return res.status(409).json({ error: 'Une carte expirée ne peut pas être réactivée.' });
+  if (status === 'Active' && card.admin_locked) return res.status(409).json({ error: 'Le déblocage doit être effectué par un administrateur.' });
+  await db.prepare('UPDATE cards SET status = ?, version=version+1 WHERE id = ?').run(status, cardId);
   res.json({ message: `Carte ${status === 'Blocked' ? 'bloquée' : 'activée'} avec succès.` });
 }
 
@@ -84,7 +67,8 @@ async function revealSecrets(req, res) {
   `).get(cardId);
   if (!card || card.user_id !== req.user.id) return res.status(403).json({ error: 'Accès refusé.' });
 
+  res.set('Cache-Control', 'private, no-store');
   res.json({ fullNumber: decrypt(card.number_encrypted), expiry: card.expiry });
 }
 
-module.exports = { listCards, createCard, toggleCard, revealSecrets };
+module.exports = { listCards, createCard, toggleCard, revealSecrets, maskCard };

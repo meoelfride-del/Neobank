@@ -1,3 +1,5 @@
+import access from './access.js';
+
 const fr = {
   language: { label: 'Langue', names: { fr: 'Français', en: 'English', es: 'Español', pt: 'Português', it: 'Italiano', de: 'Deutsch', pl: 'Polski', ru: 'Русский' } },
   common: { loading: 'Chargement…', open: 'Ouvrir', close: 'Fermer', account: 'Compte', reload: 'Recharger', home: 'Accueil', errorTitle: 'Un imprévu est survenu.', errorBody: 'L’incident a été signalé. Rechargez la page ou revenez à l’accueil.' },
@@ -29,5 +31,10 @@ for (const resource of Object.values(translations)) {
   resource.errors = resource.errors || en.errors;
 }
 
-export default { fr: { translation: fr }, en: { translation: { ...en, language: { ...en.language, names: fr.language.names } } }, ...Object.fromEntries(Object.entries(translations).map(([key, value]) => [key, { translation: value }])) };
+const resources = { fr: { translation: fr }, en: { translation: { ...en, language: { ...en.language, names: fr.language.names } } }, ...Object.fromEntries(Object.entries(translations).map(([key, value]) => [key, { translation: value }])) };
+for (const [language, resource] of Object.entries(resources)) {
+  Object.assign(resource.translation.nav, { kycReview: access[language].review, kycRequired: access[language].required, identityVerified: access[language].approved });
+  Object.assign(resource.translation.auth, { registerSubtitle: access[language].registerSubtitle, loginSubtitle: access[language].loginSubtitle });
+}
+export default resources;
 

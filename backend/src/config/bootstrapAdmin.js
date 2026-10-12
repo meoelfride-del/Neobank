@@ -13,21 +13,17 @@ async function bootstrapAdmin() {
 
   await db.initDatabase();
   const existing = await db.prepare('SELECT id, role FROM users WHERE email = ?').get(email);
-  const passwordHash = await bcrypt.hash(password, 12);
-
   if (existing) {
-    await db.prepare(`
-      UPDATE users
-      SET password_hash = ?, role = 'admin', status_compte = 'active', status_kyc = 'verified'
-      WHERE id = ?
-    `).run(passwordHash, existing.id);
-    console.log(`Compte administrateur synchronisé : ${email}`);
+    if (existing.role !== 'admin') throw new Error('Cet email appartient à un client : création administrateur refusée.');
+    console.log(`Compte administrateur existant conservé : ${email}`);
     return;
   }
 
+  const passwordHash = await bcrypt.hash(password, 12);
+
   await db.prepare(`
     INSERT INTO users (id, nom, prenom, email, password_hash, phone, role, status_kyc, status_compte)
-    VALUES (?, 'Administrateur', 'NeoBank', ?, ?, ?, 'admin', 'verified', 'active')
+    VALUES (?, 'Administrateur', 'NEO BANK', ?, ?, ?, 'admin', 'verified', 'active')
   `).run(uuid(), email, passwordHash, process.env.ADMIN_PHONE || '+22900000000');
 
   console.log(`Compte administrateur créé : ${email}`);

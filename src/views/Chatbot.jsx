@@ -11,7 +11,7 @@ export default function Chatbot() {
   useEffect(() => {
     api.get('/chatbot/history').then(({ data }) => {
       if (data.messages.length === 0) {
-        setMessages([{ id: 'welcome', sender: 'bot', content: "Bonjour ! Je suis l'assistant NeoBank. Comment puis-je vous aider aujourd'hui ?" }]);
+        setMessages([{ id: 'welcome', sender: 'bot', content: "Bonjour ! Je suis l’assistant NEO BANK. Je peux vous orienter dans les comptes, cartes, virements et budgets." }]);
       } else {
         setMessages(data.messages);
       }
@@ -36,8 +36,9 @@ export default function Chatbot() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col h-[calc(100vh-140px)]">
-      <h2 className="text-lg font-display font-semibold text-white mb-4">Assistant NeoBank</h2>
+    <div className="max-w-2xl mx-auto flex flex-col h-[calc(100vh-140px)] min-h-80">
+      <h2 className="text-lg font-display font-semibold text-white mb-2">Assistant NEO BANK</h2>
+      <p className="text-xs text-slate-250/70 mb-4">Réponses prédéfinies. Aucun conseil financier personnalisé ni suivi humain des demandes.</p>
 
       <div className="flex-1 panel p-5 overflow-y-auto space-y-4">
         {messages.map((m) => (
@@ -51,7 +52,7 @@ export default function Chatbot() {
               m.sender === 'user' ? 'bg-mint-500 text-ink-950 font-medium' : 'bg-white/5 text-slate-250/90 border border-white/5'
             }`}>
               {m.content}
-              {m.escalated ? <p className="text-[10px] mt-1 opacity-60">Transféré à un conseiller</p> : null}
+              {m.escalated ? <p className="text-[10px] mt-1 opacity-60">Message enregistré. Aucun conseiller connecté à cette conversation.</p> : null}
             </div>
           </div>
         ))}

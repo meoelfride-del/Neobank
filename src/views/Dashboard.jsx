@@ -60,7 +60,7 @@ export default function Dashboard() {
                 <p className="amount-mono text-lg text-white font-medium">
                   {acc.balance.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {acc.currency === 'EUR' ? '€' : acc.currency}
                 </p>
-                <p className="text-[11px] text-slate-250/30 font-mono mt-1 truncate">{acc.iban}</p>
+                <p className="text-[11px] text-slate-250/50 font-mono mt-1 truncate">{acc.iban || 'IBAN en attente d’attribution'}</p>
               </div>
             ))}
           </div>

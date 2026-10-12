@@ -1,0 +1,5 @@
+export const emptyProfile = { birth_date: '', birth_place: '', nationality: '', address_line: '', city: '', postal_code: '', country: '', occupation: '' };
+export const profileLabels = { birth_date: 'Date de naissance', birth_place: 'Lieu de naissance', nationality: 'Nationalité', address_line: 'Adresse complète', city: 'Ville', postal_code: 'Code postal (facultatif)', country: 'Pays de résidence', occupation: 'Profession (facultatif)' };
+export default function KycProfileFields({ value, onChange }) {
+  return <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{Object.entries(profileLabels).map(([field, label]) => <label key={field} className="label-field">{label}<input className="input-field mt-1" type={field === 'birth_date' ? 'date' : 'text'} required={!['postal_code', 'occupation'].includes(field)} max={field === 'birth_date' ? new Date().toISOString().slice(0, 10) : undefined} maxLength={field === 'address_line' ? 160 : field === 'nationality' || field === 'country' ? 80 : field === 'postal_code' ? 20 : 100} value={value[field] || ''} onChange={event => onChange(field, event.target.value)} /></label>)}</div>;
+}

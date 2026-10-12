@@ -1,53 +1,25 @@
-const cron = require('node-cron');
-const db = require('../config/database');
-const { categorize } = require('./budgetService');
-const { v4: uuid } = require('uuid');
-
-/**
- * Tâche planifiée (toutes les heures) qui exécute les prélèvements
- * automatiques (SEPA) dont la date d'échéance (next_run) est atteinte.
- */
-function startCronJobs(io) {
-  const task = cron.schedule('0 * * * *', async () => {
-    try {
-      const due = await db.prepare(`
-        SELECT * FROM scheduled_payments WHERE active = TRUE AND next_run <= ?
-      `).all(new Date());
-
-      for (const payment of due) {
-        try {
-          const account = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(payment.account_id);
-          if (!account || account.balance < payment.amount) continue;
-
-          const runPayment = db.transaction(async () => {
-            await db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(payment.amount, account.id);
-            await db.prepare(`
-              INSERT INTO transactions (id, source_account_id, destination_info, amount, type, category, status, libelle)
-              VALUES (?, ?, ?, ?, 'prelevement', ?, 'completed', ?)
-            `).run(uuid(), account.id, payment.destination_info, -payment.amount, categorize(payment.label), payment.label);
-
-            const next = new Date(payment.next_run);
-            next.setDate(next.getDate() + (payment.frequency === 'hebdomadaire' ? 7 : 30));
-            await db.prepare('UPDATE scheduled_payments SET next_run = ? WHERE id = ?').run(next.toISOString(), payment.id);
-          });
-
-          await runPayment();
-
-          if (io) {
-            const updated = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(account.id);
-            io.to(`user:${account.user_id}`).emit('balance:update', { accountId: account.id, balance: updated.balance });
-          }
-        } catch (paymentError) {
-          console.error('[cron] Failed to process scheduled payment', payment.id, paymentError);
-        }
-      }
-    } catch (err) {
-      console.error('[cron] Unexpected error while running scheduled payments', err);
-    }
-  });
-
-  console.log('[cron] Prélèvements automatiques : tâche planifiée active (toutes les heures).');
-  return task;
+﻿const cron=require('node-cron');const db=require('../config/database');const {categorize}=require('./budgetService');const {v4:uuid}=require('uuid');
+async function queueDuePayments(io){
+  const due=await db.prepare('SELECT id FROM scheduled_payments WHERE active=TRUE AND next_run<=?').all(new Date().toISOString());
+  for(const item of due){
+    const queued=await db.transaction(async()=>{
+      const payment=await db.prepare('SELECT * FROM scheduled_payments WHERE id=? FOR UPDATE').get(item.id);
+      if(!payment?.active||new Date(payment.next_run).getTime()>Date.now())return null;
+      const account=await db.prepare('SELECT a.*,u.status_kyc,u.status_compte FROM accounts a JOIN users u ON u.id=a.user_id WHERE a.id=?').get(payment.account_id);
+      if(!account?.iban||account.status_kyc!=='verified'||account.status_compte!=='active')return null;
+      const key='schedule:'+payment.id+':'+new Date(payment.next_run).toISOString();
+      const existing=await db.prepare('SELECT id FROM transactions WHERE source_account_id=? AND idempotency_key=?').get(account.id,key);
+      const id=existing?.id||uuid();
+      const destination=await db.prepare('SELECT * FROM accounts WHERE iban=?').get(payment.destination_info)
+        || await db.prepare("SELECT a.* FROM accounts a JOIN users u ON u.id=a.user_id WHERE u.phone=? AND a.type='Courant'").get(payment.destination_info);
+      if(!existing)await db.prepare(`INSERT INTO transactions(id,source_account_id,destination_info,amount,type,category,status,libelle,idempotency_key,debit_applied,destination_account_id)
+        VALUES(?,?,?,?,'prelevement',?,'pending',?,?,FALSE,?)`).run(id,account.id,payment.destination_info,-payment.amount,categorize(payment.label),payment.label,key,destination?.id || null);
+      const next=new Date(payment.next_run);next.setDate(next.getDate()+(payment.frequency==='hebdomadaire'?7:30));
+      await db.prepare('UPDATE scheduled_payments SET next_run=? WHERE id=?').run(next.toISOString(),payment.id);
+      return {id,userId:account.user_id,amount:payment.amount};
+    })();
+    if(queued&&io){io.to('role:admin').emit('transaction:otp-required',{transactionId:queued.id});io.to('user:'+queued.userId).emit('transaction:notification',{direction:'outgoing',status:'pending',amount:queued.amount,message:'Échéance en attente d’un OTP administrateur et de votre confirmation.'});}
+  }
 }
-
-module.exports = { startCronJobs };
+function startCronJobs(io){return cron.schedule('0 * * * *',()=>queueDuePayments(io).catch(()=>console.error('[cron] Contrôle des échéances impossible.')));}
+module.exports={startCronJobs,queueDuePayments};

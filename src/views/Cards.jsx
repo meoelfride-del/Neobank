@@ -4,11 +4,14 @@ import useAccountStore from '../store/accountStore';
 import useAuthStore from '../store/authStore';
 import api from '../services/api';
 import CardVisual from '../components/CardVisual';
+import { getSocket } from '../services/socket';
 
 export default function Cards() {
   const { accounts, selectedAccountId, selectAccount, fetchAccounts } = useAccountStore();
   const { user } = useAuthStore();
   const [cards, setCards] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [feedback, setFeedback] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ type: 'Virtuelle', pin: '' });
   const [creating, setCreating] = useState(false);
@@ -18,22 +21,31 @@ export default function Cards() {
   const [revealError, setRevealError] = useState('');
 
   useEffect(() => { fetchAccounts(); }, []);
-  useEffect(() => { if (selectedAccountId) loadCards(); }, [selectedAccountId]);
+  useEffect(() => {
+    if (!selectedAccountId) return;
+    const refresh = () => loadCards().catch(() => setFeedback('Impossible de charger les cartes.'));
+    const updated = ({ accountId }) => { if (accountId === selectedAccountId) { closeReveal(); refresh(); } };
+    const socket = getSocket(); refresh(); socket.on('cards:updated', updated); window.addEventListener('focus', refresh);
+    return () => { socket.off('cards:updated', updated); window.removeEventListener('focus', refresh); };
+  }, [selectedAccountId]);
 
   async function loadCards() {
     const { data } = await api.get(`/cards/account/${selectedAccountId}`);
     setCards(data.cards);
+    setRequests(data.requests || []);
   }
 
   async function handleCreate(e) {
     e.preventDefault();
     setCreating(true);
+    setFeedback('');
     try {
-      await api.post('/cards', { account_id: selectedAccountId, type: createForm.type, pin: createForm.pin });
+      const { data } = await api.post('/cards', { account_id: selectedAccountId, type: createForm.type });
+      setFeedback(data.message);
       await loadCards();
       setShowCreate(false);
       setCreateForm({ type: 'Virtuelle', pin: '' });
-    } finally {
+    } catch (error) { setFeedback(error.response?.data?.error || 'Demande impossible.'); } finally {
       setCreating(false);
     }
   }
@@ -76,6 +88,9 @@ export default function Cards() {
         </div>
       </div>
 
+      <p className="text-sm text-slate-250/70">Votre administrateur attribue les cartes à votre compte. Une demande reste en attente jusqu’à son attribution.</p>
+      {feedback && <p role="status" className="text-sm text-mint-400">{feedback}</p>}
+      {requests.filter(item => item.status === 'pending').map(item => <p key={item.id} className="panel p-3 text-sm text-gold-400">Carte {item.type.toLowerCase()} : attribution en attente.</p>)}
       {cards.length === 0 ? (
         <div className="panel p-10 text-center text-slate-250/40 text-sm">Aucune carte pour ce compte.</div>
       ) : (
@@ -88,12 +103,13 @@ export default function Cards() {
                   <Eye size={13} /> Voir le numéro
                 </button>
                 <button
+                  disabled={card.admin_locked || card.status === 'Expired'}
                   onClick={() => toggleStatus(card)}
                   className={`flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl border transition-colors ${
                     card.status === 'Active' ? 'border-coral-500/20 text-coral-400 hover:bg-coral-500/10' : 'border-mint-500/20 text-mint-400 hover:bg-mint-500/10'
                   }`}
                 >
-                  {card.status === 'Active' ? <><Lock size={13} /> Bloquer</> : <><Unlock size={13} /> Activer</>}
+                  {card.admin_locked ? 'Blocage administrateur' : card.status === 'Expired' ? 'Expirée' : card.status === 'Active' ? <><Lock size={13} /> Bloquer</> : <><Unlock size={13} /> Activer</>}
                 </button>
               </div>
               <p className="text-xs text-slate-250/40 text-center">Plafond : {card.limits.toFixed(2)} €</p>
@@ -106,22 +122,18 @@ export default function Cards() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={() => setShowCreate(false)}>
           <form onClick={(e) => e.stopPropagation()} onSubmit={handleCreate} className="panel p-6 w-full max-w-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-display font-semibold text-white">Nouvelle carte</h3>
+              <h3 className="font-display font-semibold text-white">Demander une carte</h3>
               <button type="button" onClick={() => setShowCreate(false)}><X size={18} className="text-slate-250/50" /></button>
             </div>
             <div>
               <label className="label-field">Type de carte</label>
               <select className="input-field" value={createForm.type} onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}>
-                <option value="Virtuelle">Virtuelle (éphémère, 24h)</option>
+                <option value="Virtuelle">Virtuelle</option>
                 <option value="Physique">Physique</option>
               </select>
             </div>
-            <div>
-              <label className="label-field">Code PIN (4 chiffres)</label>
-              <input required maxLength={4} pattern="[0-9]{4}" className="input-field font-mono" value={createForm.pin} onChange={(e) => setCreateForm({ ...createForm, pin: e.target.value.replace(/\D/g, '') })} />
-            </div>
             <button type="submit" disabled={creating} className="btn-primary w-full flex items-center justify-center gap-2">
-              {creating && <Loader2 size={16} className="animate-spin" />} Générer la carte
+              {creating && <Loader2 size={16} className="animate-spin" />} Envoyer la demande
             </button>
           </form>
         </div>

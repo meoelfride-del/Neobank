@@ -47,7 +47,7 @@ app.use(globalLimiter);
 
 // --- Routes --------------------------------------------------------------
 app.get('/', (req, res) => res.json({
-  service: 'NeoBank API',
+  service: 'NEO BANK API',
   status: 'online',
   database: 'PostgreSQL',
   health: '/api/health',
@@ -55,7 +55,7 @@ app.get('/', (req, res) => res.json({
 }));
 
 app.get('/api', (req, res) => res.json({
-  service: 'NeoBank API',
+  service: 'NEO BANK API',
   status: 'online',
   health: '/api/health',
 }));

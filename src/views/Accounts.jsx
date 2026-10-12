@@ -57,7 +57,7 @@ export default function Accounts() {
   }
 
   async function cancelTransfer(txId) {
-    if (!window.confirm('Annuler ce virement en attente et rembourser le montant ?')) return;
+    if (!window.confirm('Annuler cette opération en attente ?')) return;
     try {
       const { data: result } = await api.post(`/transactions/${txId}/cancel`);
       setTransactionMessage({ type: 'success', text: result.message });
@@ -106,7 +106,7 @@ export default function Accounts() {
             <p className="amount-mono text-2xl font-semibold text-white">
               {acc.balance.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            <p className="text-[11px] font-mono text-slate-250/30 mt-2 truncate">{acc.iban}</p>
+            <p className="text-[11px] font-mono text-slate-250/50 mt-2 truncate">{acc.iban || 'IBAN en attente d’attribution'}</p>
           </button>
         ))}
       </div>

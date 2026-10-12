@@ -1,8 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss" source(none);
+@config "../tailwind.config.js";
+@source "./";
+@source "../index.html";
 
 @layer base {
+  /* Conserver le curseur des boutons du Preflight précédent. */
+  button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
   html { @apply scroll-smooth; }
   body {
     @apply bg-ink-900 text-slate-250 font-body antialiased;

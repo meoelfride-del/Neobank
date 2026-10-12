@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('./src/config/runtimeValidation').validateRuntime();
 const http = require('http');
 const { Server } = require('socket.io');
 const app = require('./src/app');
@@ -25,12 +26,13 @@ async function startServer() {
   initSockets(io);
   app.set('io', io);
   const cronTask = startCronJobs(io);
+  const stopSms = require('./src/services/smsService').start();
 
   await new Promise((resolve, reject) => {
     apiServer.once('error', reject);
     apiServer.listen(port, resolve);
   });
-  console.log(`NeoBank API démarrée sur http://localhost:${port}`);
+  console.log(`NEO BANK API démarrée sur http://localhost:${port}`);
 
   if (socketServer !== apiServer) {
     await new Promise((resolve, reject) => {
@@ -43,6 +45,7 @@ async function startServer() {
   return {
     async close() {
       cronTask.stop();
+      stopSms();
       await new Promise((resolve) => io.close(resolve));
       if (socketServer !== apiServer) {
         await new Promise((resolve) => apiServer.close(resolve));

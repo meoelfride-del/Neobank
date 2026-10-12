@@ -1,0 +1,671 @@
+{
+  "date": "2026-10-12",
+  "files": [
+    {
+      "path": ".env.example",
+      "bytes": 460,
+      "sha256": "4379d1a51173221ee44f8fad4bd8b415b4a799927eb8638bebd7438505d87238"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 143,
+      "sha256": "99cbb120a1f26a82e00905c15b2aa2496efaa56149494f0dea2057ab5a7d89ee"
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "sha256": "2722b61f414f07f08be7f1f1316012813818f26f1c40d6a24a748686cec7d2ff"
+    },
+    {
+      "path": ".vercelignore",
+      "bytes": 96,
+      "sha256": "ee2a45293ee298ecf0a0a2fa6650a39667a67f8cea706877c9aa6d2fccff9b77"
+    },
+    {
+      "path": "AUTH_MFA_GUIDE.md",
+      "bytes": 3960,
+      "sha256": "62b6eeff8e8f817be4ec61d4311c3640a02e285dde5443f7f4fc11f84136ea9a"
+    },
+    {
+      "path": "BANKING_ADMIN_GUIDE.md",
+      "bytes": 7383,
+      "sha256": "d755f66a115e178b9353b282b534601e280263543f4bbef3f57cb226725cceac"
+    },
+    {
+      "path": "KYC_GUIDE.md",
+      "bytes": 5422,
+      "sha256": "71ec6de605f407b8d87391dc1af238b7a4a11f442f6367652820366fd330a987"
+    },
+    {
+      "path": "RELEASE_READINESS.md",
+      "bytes": 6295,
+      "sha256": "5c05a9991eabede0fa1414eba5a532e9154a8aa5c3f7e9420f46008446c73001"
+    },
+    {
+      "path": "TEXTBEE_GUIDE.md",
+      "bytes": 3241,
+      "sha256": "11cc49871ad31ee6bbe5d400e3d4442a3694955c51747f95fa68d5218a96c0c3"
+    },
+    {
+      "path": "VALIDATION_GUIDE.md",
+      "bytes": 9803,
+      "sha256": "95732d64c57386231d7517b32075cd676d4430e47d2333649137382bd473fdeb"
+    },
+    {
+      "path": "audit/kyc-synthetic.jpg",
+      "bytes": 1636,
+      "sha256": "d38ace1e9c558306062773645cf70726ad347f77ff2b579660bd4af46cfcbcec"
+    },
+    {
+      "path": "backend/.env.example",
+      "bytes": 1021,
+      "sha256": "1475cd2fe40cdd1d4761c1a7511e26588045d534cd7a286830cd74fb41f3a6ca"
+    },
+    {
+      "path": "backend/.node-version",
+      "bytes": 8,
+      "sha256": "2722b61f414f07f08be7f1f1316012813818f26f1c40d6a24a748686cec7d2ff"
+    },
+    {
+      "path": "backend/package-lock.json",
+      "bytes": 89952,
+      "sha256": "3c9cbc0c6e26618828bfb5d81cc1015394a23705fe8f98aa7f626fd7def78731"
+    },
+    {
+      "path": "backend/package.json",
+      "bytes": 1003,
+      "sha256": "6681447c98dc3fad7f909a1e7b51b5cdfc2a73caf35af93eaff14e225ffacd82"
+    },
+    {
+      "path": "backend/server.js",
+      "bytes": 2762,
+      "sha256": "b10047144cd548342a6a0dcaaaba43e4f4d3e35701ae926c6fa6b1ccb697ecd0"
+    },
+    {
+      "path": "backend/src/app.js",
+      "bytes": 3899,
+      "sha256": "4da1c3464cb3dcbee4722ef521d1b74c7b7704cce9a1340363ae32653166860e"
+    },
+    {
+      "path": "backend/src/config/bootstrapAdmin.js",
+      "bytes": 1418,
+      "sha256": "930ab3273b777d0ece72dbbb963c66441b749d84902a0d86a359ee9d8ab48e28"
+    },
+    {
+      "path": "backend/src/config/clientOrigins.js",
+      "bytes": 538,
+      "sha256": "d3662220a3b34a33a55c7db2b542d54e4885ee30e8753c527f1d92fcbc1f37aa"
+    },
+    {
+      "path": "backend/src/config/database.js",
+      "bytes": 12220,
+      "sha256": "7f561fc4fc4f5480198d630a1858af4a3c01d4ab79fc2b8a2c084cc1e6dc9652"
+    },
+    {
+      "path": "backend/src/config/runtimeValidation.js",
+      "bytes": 940,
+      "sha256": "d43de54b33e756fb00550b28c071c355dd746876b0ba1c779efe089d7d97e42c"
+    },
+    {
+      "path": "backend/src/config/seed.js",
+      "bytes": 3238,
+      "sha256": "2a0a292032c8169ba98b64b7fdf425615610d71405cf42b57ba9fd886d3e009e"
+    },
+    {
+      "path": "backend/src/controllers/accountController.js",
+      "bytes": 1735,
+      "sha256": "17008b2e17ccc3fdc7d04c99128a25836720ea8059ad3c4b7c5ea65bf238570a"
+    },
+    {
+      "path": "backend/src/controllers/adminController.js",
+      "bytes": 19106,
+      "sha256": "80e23a8db4e76c6ed64f57c040f5b66c5920a784ffe3b71f08fcaa2c840df023"
+    },
+    {
+      "path": "backend/src/controllers/authController.js",
+      "bytes": 8047,
+      "sha256": "e656f4bbe3d612b9dc54241ced33580b1e173e4d96eed1af01991339b43fa988"
+    },
+    {
+      "path": "backend/src/controllers/bankAdminController.js",
+      "bytes": 5277,
+      "sha256": "7497195220b547f2da6e56f59c2761ee536433969de661605e8ab298b8301c53"
+    },
+    {
+      "path": "backend/src/controllers/budgetController.js",
+      "bytes": 1106,
+      "sha256": "78c40489ff58c28d8aea2da273fc3f481043e3f7bb27ec6a67bcc7ea50f6d9f4"
+    },
+    {
+      "path": "backend/src/controllers/cardController.js",
+      "bytes": 3871,
+      "sha256": "27165666465a322f13eb16c42ff1b46983ea05fd9aa04576c421d0df0cc94261"
+    },
+    {
+      "path": "backend/src/controllers/chatbotController.js",
+      "bytes": 1088,
+      "sha256": "30fca5b5121e1059749ce978a525aa8fff548a11dd4968b00e8c0eab37f39dd4"
+    },
+    {
+      "path": "backend/src/controllers/kycController.js",
+      "bytes": 1395,
+      "sha256": "65149fbaf35a20be53e89c8544d8a46aaa84f205fdf279c08df4d39e076f9c4a"
+    },
+    {
+      "path": "backend/src/controllers/notificationController.js",
+      "bytes": 1227,
+      "sha256": "569e2baccff58b6ccd77b8649837688f4a32bd60b2c298aa8eb39c1aa0c481ba"
+    },
+    {
+      "path": "backend/src/controllers/transactionController.js",
+      "bytes": 13471,
+      "sha256": "86faf9b035151bcb6343c375ef30267a0f16b0dc02c93f10e31136846f92b449"
+    },
+    {
+      "path": "backend/src/middleware/auth.js",
+      "bytes": 2307,
+      "sha256": "2bbe2e37451e60915f599ff92c21596249b1434cb28ab99d3d91e7ae32cd5540"
+    },
+    {
+      "path": "backend/src/middleware/errorHandler.js",
+      "bytes": 702,
+      "sha256": "fc31d15f454bb2b9730414bc13c8c4a9ca608abd4c523c03f7f7370f902672c2"
+    },
+    {
+      "path": "backend/src/middleware/kycUpload.js",
+      "bytes": 1303,
+      "sha256": "d53547011081ab53e489d57f5d2336ad55b3cb9ddb1e26bd233f68bfd6b68b93"
+    },
+    {
+      "path": "backend/src/middleware/validate.js",
+      "bytes": 6544,
+      "sha256": "cc8866499fb10306a2ab84727aee0c4fc3c83230b8409fcb908f3a4841740d65"
+    },
+    {
+      "path": "backend/src/routes/accountRoutes.js",
+      "bytes": 931,
+      "sha256": "9a55207d74bab335bbcf8cf5db0563dc0e50d111c4ce443cc6603306b606570f"
+    },
+    {
+      "path": "backend/src/routes/adminRoutes.js",
+      "bytes": 2469,
+      "sha256": "6ca13c5d2049dd0a07d1b55be784aa38babca9e2abc4bc0073a1d88059efe4f2"
+    },
+    {
+      "path": "backend/src/routes/authRoutes.js",
+      "bytes": 861,
+      "sha256": "cfe47bc2e1d1bc964445905cb34648acefb3e44873d073efa26110fc63786601"
+    },
+    {
+      "path": "backend/src/routes/budgetRoutes.js",
+      "bytes": 300,
+      "sha256": "1420320ed4b978c768feeefbc3593705500f3355ca47b3dc9769d09252073e71"
+    },
+    {
+      "path": "backend/src/routes/cardRoutes.js",
+      "bytes": 600,
+      "sha256": "91a6659d4a518b46454ae30591a5fcb7e10c90c8fb4ce09c461ffe891614b5de"
+    },
+    {
+      "path": "backend/src/routes/chatbotRoutes.js",
+      "bytes": 428,
+      "sha256": "1c88907e8cf1b46e42929d3a757dd790ca2ce804cf9830479a28044c5f88573b"
+    },
+    {
+      "path": "backend/src/routes/notificationRoutes.js",
+      "bytes": 360,
+      "sha256": "2d9c9ba9ef708073b54b0a4baef08177f252be71d4bedd8535a0be3d0dcbaa1d"
+    },
+    {
+      "path": "backend/src/routes/transactionRoutes.js",
+      "bytes": 795,
+      "sha256": "d0d160e610f2043ba19be5dbbba9a15102a682f6bec811ae9333e6bc84351bac"
+    },
+    {
+      "path": "backend/src/services/bankIdentifiers.js",
+      "bytes": 923,
+      "sha256": "ae99396ecb3533cfa5197734c05b89c4c9633ccb194cb76662ea3aa38ea9fc1c"
+    },
+    {
+      "path": "backend/src/services/budgetService.js",
+      "bytes": 1781,
+      "sha256": "58176cff2716e78bb03972b17de4d984fb779efa0c13d27609ec582de2f39a22"
+    },
+    {
+      "path": "backend/src/services/chatbotService.js",
+      "bytes": 2514,
+      "sha256": "bdfbb9c51552fea1ae2b42783613cf98248145e5c0dffb81037284047395cbfb"
+    },
+    {
+      "path": "backend/src/services/cronService.js",
+      "bytes": 2599,
+      "sha256": "16bc8a9d6cdb286e112af628baa7f10da49407c7e5c36013ac8edeb1ab892690"
+    },
+    {
+      "path": "backend/src/services/cryptoService.js",
+      "bytes": 2265,
+      "sha256": "1ba94900ddbc6624ae6ed4391bb8dce63a91760c610c15a1bbe4e2054d35b317"
+    },
+    {
+      "path": "backend/src/services/fraudService.js",
+      "bytes": 698,
+      "sha256": "53fdbf7d7ea5602a9e00b0e71b38c56dcde66675ded64488ceb86eff6c3595ff"
+    },
+    {
+      "path": "backend/src/services/kycCrypto.js",
+      "bytes": 1192,
+      "sha256": "f5110387cbcc28ec1a47184b93800d5106b49ee2e353adf255a5376d08e389f1"
+    },
+    {
+      "path": "backend/src/services/kycService.js",
+      "bytes": 7445,
+      "sha256": "512529fe58e3336686101ce5f1f6b8729ce31bc8d8ab14f2f06e725a8632694c"
+    },
+    {
+      "path": "backend/src/services/mfaCrypto.js",
+      "bytes": 1084,
+      "sha256": "47f067b361a6a115fcccd49275bb6b587eb6aaa428ca7d00ca622c1f0452e25d"
+    },
+    {
+      "path": "backend/src/services/mfaService.js",
+      "bytes": 3327,
+      "sha256": "e54d6566094250edb8e4df13431f8540504aef4e3d70390e28970173be4c36be"
+    },
+    {
+      "path": "backend/src/services/sessionService.js",
+      "bytes": 1403,
+      "sha256": "39c5d2537054142bdcd72ccc180fe273fbfda62befa0a8bffc42914783389a3c"
+    },
+    {
+      "path": "backend/src/services/smsService.js",
+      "bytes": 9187,
+      "sha256": "1fa53c05ddb7200f417450d25f46878ea0eeacf6a611f980006dd3b66edda404"
+    },
+    {
+      "path": "backend/src/sockets/index.js",
+      "bytes": 1548,
+      "sha256": "f8b14bc06f0da2d5a029e69207b96edd0d8058f0e48dc968b502905b9ee91c87"
+    },
+    {
+      "path": "backend/test/api.integration.test.js",
+      "bytes": 25746,
+      "sha256": "7bf8aa4532fafad8ec6704883d3444b92912436941b893ff95045c9e40b9d4db"
+    },
+    {
+      "path": "backend/test/banking.integration.test.js",
+      "bytes": 14233,
+      "sha256": "a8fe22c71882d12fe7f14bf56014e2bf558714b458333d5950511ef7e37e3d7c"
+    },
+    {
+      "path": "backend/test/bootstrapAdmin.test.js",
+      "bytes": 1773,
+      "sha256": "e15209d31e2caab48aa1f82b349f7f933b53a459f6f83f66293dd33a0a0fafff"
+    },
+    {
+      "path": "backend/test/demo.test.js",
+      "bytes": 3371,
+      "sha256": "cc59e03c710185431be3a8d1cd5b9e202d21586e8c6f91fdbef0ea04e396bc10"
+    },
+    {
+      "path": "backend/test/kyc.integration.test.js",
+      "bytes": 11442,
+      "sha256": "34477f41df86125a72392834ba46b3abe149d418c0b0742a8aaeb77b8f6e58ad"
+    },
+    {
+      "path": "backend/test/mfa.test.js",
+      "bytes": 3499,
+      "sha256": "07a25ee6f4f9840d89aae35c0078257941a84be59024458c717169905da535fb"
+    },
+    {
+      "path": "backend/test/postgres-validation.cjs",
+      "bytes": 2673,
+      "sha256": "ca6e3ebff86d1cfa81fdfbf7ecff26add808e029b6353c6e45330af6895dcc29"
+    },
+    {
+      "path": "backend/test/runtimeValidation.test.js",
+      "bytes": 1415,
+      "sha256": "8586b8d14aecd9d195d59260722d14fab9d2ab05195b91a195166853320da947"
+    },
+    {
+      "path": "backend/test/sessions.integration.test.js",
+      "bytes": 6378,
+      "sha256": "163d243376498bd7d98f2e965a174187d2bfb872a2209836675c1bc22dbb1f96"
+    },
+    {
+      "path": "backend/test/sms.test.js",
+      "bytes": 7334,
+      "sha256": "6478449070cad69ba5756ce3df4ce2d432aef356e819f4e3d242e7f547072da4"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2051,
+      "sha256": "28be6200c8bf51a24fbcecfcafc8af815913a5cfaa9cf3829d0c50bf8d698e8d"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 84539,
+      "sha256": "348dfaef692a439f64341a6faae562f959954b8c3907c2ffd55df7c61baf12de"
+    },
+    {
+      "path": "package.json",
+      "bytes": 1084,
+      "sha256": "265b82bd95341daa8b2c66abaceb87e1830639b42fb781ed980d4d67b7811eb4"
+    },
+    {
+      "path": "postcss.config.js",
+      "bytes": 70,
+      "sha256": "4cae941be9bc3bee9a6905e47ea7a51aee216d587d34a8cc4ae48f78fd6d8159"
+    },
+    {
+      "path": "public/favicon.svg",
+      "bytes": 999,
+      "sha256": "120df1bbd8306f65b47a1ab3d9dd7080c07e20ac64f3fdf62f3f8711ed95faef"
+    },
+    {
+      "path": "public/og-image.svg",
+      "bytes": 1259,
+      "sha256": "f7d881489432706e88f4592dc65f2429d2f8bd266db8a4805fb63a91b0b0dc7f"
+    },
+    {
+      "path": "public/robots.txt",
+      "bytes": 227,
+      "sha256": "cb4ad84f6f4f0daad7a95e522cdf23ef6020b66f54f1f679e61e7235c4bc5993"
+    },
+    {
+      "path": "public/sitemap.xml",
+      "bytes": 826,
+      "sha256": "32cfd3378d068fb6d5e23827d97184ab0541d4571ce60ef5d0f96ae7e401971a"
+    },
+    {
+      "path": "render.yaml",
+      "bytes": 1219,
+      "sha256": "036d8162d78baba32abef0a4825a55ba3033c4d0931e4693424d16c2170c49e7"
+    },
+    {
+      "path": "scripts/check-i18n.mjs",
+      "bytes": 905,
+      "sha256": "7e73492342b5809ce6a92e1a98d1790ba2d9dd88ecc813952a182cf15bf1efc4"
+    },
+    {
+      "path": "scripts/check-local-flows.cjs",
+      "bytes": 8621,
+      "sha256": "5f47951e680a16360634386e3037eda015ce543bac86610c9c4c3597c3f1c01f"
+    },
+    {
+      "path": "scripts/check-local-postgres.cjs",
+      "bytes": 2694,
+      "sha256": "415c7c221b7ade9037db507cce5218dfc5e7f6058fd64ea3ea2bac1a3bd691fb"
+    },
+    {
+      "path": "scripts/check-registration-atomicity.cjs",
+      "bytes": 2664,
+      "sha256": "0b21a42437dd69e2715cef41ba90a24acb8b5c1e90d955929062bf85537d7127"
+    },
+    {
+      "path": "scripts/dev-all.cjs",
+      "bytes": 7164,
+      "sha256": "ca9d0e67da4beb1b71709669a5413ac6d6380b82c8889a5b5b67e03a3ef022b0"
+    },
+    {
+      "path": "scripts/generate-spa-routes.cjs",
+      "bytes": 915,
+      "sha256": "973e42ce79bae5964fba2e64577a3c875dbdf761fb0ddf2a510ecbae72a96080"
+    },
+    {
+      "path": "scripts/prepare-release.cjs",
+      "bytes": 3073,
+      "sha256": "1764bf3f3964831d8288fff2061ae696351c5abeb0943b3aac1c9749f89c8244"
+    },
+    {
+      "path": "scripts/setup-local-db.cjs",
+      "bytes": 3084,
+      "sha256": "3beaf88bf3038f8107367f43d39be7ef57a8b1f608000f512e22864a83a46986"
+    },
+    {
+      "path": "src/App.jsx",
+      "bytes": 3957,
+      "sha256": "173e5350004f4abfb26d76adaf62f7df984c69170a556286f3fa6d625319d199"
+    },
+    {
+      "path": "src/components/AppLayout.jsx",
+      "bytes": 4680,
+      "sha256": "7efdf2f3c692c87d0240ff2ffcde82bb9971b8753637a6b132834a0604789ba2"
+    },
+    {
+      "path": "src/components/BankingDialog.jsx",
+      "bytes": 9187,
+      "sha256": "86d8d9105d58d9e2fc5c028aae7f4b46c135054c8a976a2951ccea2da1c4cb62"
+    },
+    {
+      "path": "src/components/BudgetChart.jsx",
+      "bytes": 1272,
+      "sha256": "ef12469514e3f1051ae0c26a199ef8cfd182d54be2e19094f3fbbf18177a211f"
+    },
+    {
+      "path": "src/components/CardVisual.jsx",
+      "bytes": 2876,
+      "sha256": "469332b693f83261a26dcbf5587a414b44ad8bd44c4e6d0650f0fb93bf098d05"
+    },
+    {
+      "path": "src/components/ErrorBoundary.jsx",
+      "bytes": 1758,
+      "sha256": "693b723c322f8b6bd4e108c0d02586d2b0c382bace6efb0a1ec29e8e11f8172f"
+    },
+    {
+      "path": "src/components/KycPhoto.jsx",
+      "bytes": 2079,
+      "sha256": "bd337c75e49617b6984bbaf54535d92ea2bf36633492c69650dc050d01cf365a"
+    },
+    {
+      "path": "src/components/KycProfileFields.jsx",
+      "bytes": 1141,
+      "sha256": "e791064ec8ec194baeb2045df85aec79c7f26b23166d02955b4fb45f06fcf2ee"
+    },
+    {
+      "path": "src/components/KycReviewDialog.jsx",
+      "bytes": 6419,
+      "sha256": "9f257c484307f6000fb771eb5097324f8004a014fc5096fd1892f132c62b801d"
+    },
+    {
+      "path": "src/components/LanguageSelector.jsx",
+      "bytes": 994,
+      "sha256": "ae52529af3e96f0c6fa3b1ba42b59a620776120ee6063a1e2e5c4bb9d06a9e9d"
+    },
+    {
+      "path": "src/components/Navbar.jsx",
+      "bytes": 3444,
+      "sha256": "d1bb4f4786597b5bff747b70d700f885b9ac6bd6a8f7d95d0524af43236b099f"
+    },
+    {
+      "path": "src/components/NotificationCenter.jsx",
+      "bytes": 5575,
+      "sha256": "d9b0724656e80fe17de6f35048064837b2bea41e7747d1ad8bf894ba78656bdb"
+    },
+    {
+      "path": "src/components/ProtectedRoute.jsx",
+      "bytes": 680,
+      "sha256": "7925f84a95b2f704e5a6b9dbcbeec6c3ad69e6a68c12896cba6622a5e8dad58e"
+    },
+    {
+      "path": "src/components/Sidebar.jsx",
+      "bytes": 2510,
+      "sha256": "2ac16614379fdd112185671ca6bbb82c3e2a9e855a5caec7e3de4e4a7ab93e48"
+    },
+    {
+      "path": "src/components/TransactionRow.jsx",
+      "bytes": 6528,
+      "sha256": "520bd59812abecae1913547a15929d80939c5c96dd561622aa4e1305f299763d"
+    },
+    {
+      "path": "src/config/legal.js",
+      "bytes": 861,
+      "sha256": "a4adced7dee8d9b5c50a157629c859a10a215b7144c8030c1bdf8df343b81a42"
+    },
+    {
+      "path": "src/config/runtime.js",
+      "bytes": 832,
+      "sha256": "677b6cada02b1e25a1219a7fae66007f70a15a11620316c8a87a9ea91a0d3cea"
+    },
+    {
+      "path": "src/frontend.code-workspace",
+      "bytes": 97,
+      "sha256": "751123b845c75fbde28c8d8807bd2587ffe816738ca8784df4c211906f99ea6d"
+    },
+    {
+      "path": "src/i18n/access.js",
+      "bytes": 1848,
+      "sha256": "f70c3891ec950cfa236ce08ec22fb6228b16ac7ec0d915ff13bcd535fd69ffa2"
+    },
+    {
+      "path": "src/i18n/index.js",
+      "bytes": 861,
+      "sha256": "140cb144603327a401a2651e8e77817fd1810b88be16e49d652551cc00c0c695"
+    },
+    {
+      "path": "src/i18n/locale.js",
+      "bytes": 1391,
+      "sha256": "1a07c2c4cb130be98d6a1582bca2d064f07fc93bc01ecc759b9fcd92dfc63a36"
+    },
+    {
+      "path": "src/i18n/resources.js",
+      "bytes": 11570,
+      "sha256": "f3aefdc9e696485042f34adb3e30742e94ac699b96806ff4b8879aacfc288339"
+    },
+    {
+      "path": "src/index.css",
+      "bytes": 2452,
+      "sha256": "f7f5ed71fa0f30bc6d00d12b02fcb7195cc8c2a66e50f88107b44551819f3164"
+    },
+    {
+      "path": "src/main.jsx",
+      "bytes": 433,
+      "sha256": "a453fc6a9222c3d90b17170ee3c08d1f704ed76daa0360c9ef63aee1536ecf3d"
+    },
+    {
+      "path": "src/services/api.js",
+      "bytes": 2260,
+      "sha256": "dfc197576ae9ca63215239bcf2c554aba558b45474c1ad4b162b05385b088bf2"
+    },
+    {
+      "path": "src/services/registrationError.js",
+      "bytes": 1019,
+      "sha256": "e8256e1931016db25a6762c8231bf7580c0180a1fea5d729adf600f055e77c14"
+    },
+    {
+      "path": "src/services/socket.js",
+      "bytes": 787,
+      "sha256": "81baba7143f98702aa8fb8e331f16007e31ba3f0cbed80ca7f40a24132f25a50"
+    },
+    {
+      "path": "src/store/accountStore.js",
+      "bytes": 2292,
+      "sha256": "12c836b7b5857a6b23d216b893a53ad7e06b0cf63c3ba385c8aa0964b7180535"
+    },
+    {
+      "path": "src/store/authStore.js",
+      "bytes": 3382,
+      "sha256": "a7f9e8399fc965a86080a31d53a1b0c89bc4bf91138ba00a906fa5fdc53844a2"
+    },
+    {
+      "path": "src/views/Accounts.jsx",
+      "bytes": 7410,
+      "sha256": "60d99d91d4347f48340a9c7246a9e011af97d04752c8a0a7c252fb6135dce857"
+    },
+    {
+      "path": "src/views/AdminBackoffice.jsx",
+      "bytes": 31887,
+      "sha256": "173977c651bba45c645b27a6e55e7162aed1aaacc98743d247917a42646ea2d0"
+    },
+    {
+      "path": "src/views/Budget.jsx",
+      "bytes": 3160,
+      "sha256": "562eef6e5fe67b22480c742973ae48c73fa6377e4b27bdb6ef9c437c60420684"
+    },
+    {
+      "path": "src/views/Cards.jsx",
+      "bytes": 8503,
+      "sha256": "b9f8290ac9c3ecd67e432c02f6c7f6b3713ccac00c7a37ee328cb95e1d8ac395"
+    },
+    {
+      "path": "src/views/Chatbot.jsx",
+      "bytes": 3242,
+      "sha256": "7eea8d807286d634b923799520342f0aa309969721d258a45d98a162a2796e6f"
+    },
+    {
+      "path": "src/views/Dashboard.jsx",
+      "bytes": 4478,
+      "sha256": "535c0ff42a7232d4328e30f971b3745006963544cd97ffd2c2542780d8d7f2f1"
+    },
+    {
+      "path": "src/views/Landing.jsx",
+      "bytes": 22642,
+      "sha256": "13d4e8b749cc1bf85fc60732f8fa5cf9ec32a460dd3ffed3715110288d7b724f"
+    },
+    {
+      "path": "src/views/Legal.jsx",
+      "bytes": 11455,
+      "sha256": "fafa29a6883ee346807b70520022105c563b159b4599036b5a4db46bca1564a5"
+    },
+    {
+      "path": "src/views/Login.jsx",
+      "bytes": 4203,
+      "sha256": "99c32b60077e858c5e3ee1d6199a6311c9177e7c6c2e6c36d6a3bc40a9022490"
+    },
+    {
+      "path": "src/views/NotFound.jsx",
+      "bytes": 581,
+      "sha256": "0e75a462e0eced35fb3aaf045ce5c19a8788b0c3954fc380f39178a0340e9ea0"
+    },
+    {
+      "path": "src/views/OnboardingKYC.jsx",
+      "bytes": 7182,
+      "sha256": "f18687e2f5a4fe07bc1850600d18503026fd01e2f587ef2d1cf75d116d9fc29c"
+    },
+    {
+      "path": "src/views/Register.jsx",
+      "bytes": 4052,
+      "sha256": "3c7033991493183dd88fe44797e00c8fef5ae180cc762ec0e6cf5a0729c6a91b"
+    },
+    {
+      "path": "src/views/Security.jsx",
+      "bytes": 4803,
+      "sha256": "ac85c01287bb9ddecd937f5210752442373efba4ccf2895fe1958a97b9befa66"
+    },
+    {
+      "path": "src/views/Transfer.jsx",
+      "bytes": 9257,
+      "sha256": "a53fcee129e82c3fe37bc1a389d9f306a7ffb06f4cf2f3c8e1e3136d6d724f1f"
+    },
+    {
+      "path": "tailwind.config.js",
+      "bytes": 1774,
+      "sha256": "46d4838defcdd87f96c5d6a5d3ac4b1714428a800d43a87d48ca5d334ab31b84"
+    },
+    {
+      "path": "test/build.test.js",
+      "bytes": 4549,
+      "sha256": "82dffd7fa2ce1bf1bd0e22332f82a9d6cab340dd0487efe9b5f33364ec7151f1"
+    },
+    {
+      "path": "test/locale.test.js",
+      "bytes": 989,
+      "sha256": "54a875ae190597ec245f1743896ff0fe8dce40328464db1428dcdbc5947f72ef"
+    },
+    {
+      "path": "test/registrationError.test.js",
+      "bytes": 1323,
+      "sha256": "20ac3b8c1027808374bb6f1875db2ffc19ac81a630b3c60bd5124536626fbd81"
+    },
+    {
+      "path": "vercel.json",
+      "bytes": 211,
+      "sha256": "1f94619c16328a6faccc822469b4c4c6b1dcc29845e03b173f055ee07954b653"
+    },
+    {
+      "path": "vite.config.js",
+      "bytes": 240,
+      "sha256": "410b222bf5d6e58fe6dbecdcf2217f2197e727f6b76c71fe64406de9b400c98b"
+    }
+  ],
+  "secretsIncluded": false
+}

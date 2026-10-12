@@ -26,6 +26,16 @@ services:
           property: connectionString
       - key: CLIENT_URL
         value: https://www.neo-finance.app
+      - key: SOCKET_PORT
+        value: "0"
+      - key: SMS_PROVIDER
+        value: textbee
+      - key: SMS_ENABLED
+        value: "false"
+      - key: TEXTBEE_API_KEY
+        sync: false
+      - key: TEXTBEE_DEVICE_ID
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
