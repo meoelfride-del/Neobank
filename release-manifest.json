@@ -68,13 +68,13 @@
     },
     {
       "path": "backend/package-lock.json",
-      "bytes": 89952,
-      "sha256": "3c9cbc0c6e26618828bfb5d81cc1015394a23705fe8f98aa7f626fd7def78731"
+      "bytes": 93158,
+      "sha256": "f32ce0731ad5bf1d50b86f229132f332c4822a7f3f07d02e84499e5211917864"
     },
     {
       "path": "backend/package.json",
-      "bytes": 1003,
-      "sha256": "6681447c98dc3fad7f909a1e7b51b5cdfc2a73caf35af93eaff14e225ffacd82"
+      "bytes": 1037,
+      "sha256": "06d7d2318e7998ddf1dccdf74de6fe5483544b54abfda310c751bbab86dc1bca"
     },
     {
       "path": "backend/server.js",
