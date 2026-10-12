@@ -34,6 +34,7 @@
     "uuid": "^14.0.1"
   },
   "devDependencies": {
-    "pg-mem": "^3.0.14"
+    "pg-mem": "^3.0.14",
+    "socket.io-client": "^4.8.3"
   }
 }
