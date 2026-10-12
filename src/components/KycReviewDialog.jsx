@@ -10,6 +10,7 @@ export default function KycReviewDialog({ user, onClose, onReviewed }) {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [photoReady, setPhotoReady] = useState(false);
+  const [backReady, setBackReady] = useState(false);
   const [checked, setChecked] = useState(false);
   const busyRef = useRef(busy); busyRef.current = busy;
   const panel = useRef(null);
@@ -51,11 +52,12 @@ export default function KycReviewDialog({ user, onClose, onReviewed }) {
     {dossier && <><p className="text-white">Statut : {({ pending: 'À compléter', in_review: 'En revue', verified: 'Validé', rejected: 'Refusé' })[status]}</p><p className="text-sm text-slate-250/80">{dossier.user.email} · {dossier.user.phone}</p>
     {dossier.profile ? <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">{Object.entries(profileLabels).map(([field, label]) => <div key={field} className="rounded-xl bg-white/5 p-3"><dt className="text-xs text-slate-250/60">{label}</dt><dd className="text-sm text-white break-words">{dossier.profile[field] || 'Non renseigné'}</dd></div>)}</dl> : <p>Profil incomplet.</p>}
     {dossier.document && <p className="text-sm text-slate-250/70">{({ identity_card: 'Carte d’identité', passport: 'Passeport', residence_permit: 'Titre de séjour' })[dossier.document.document_type]} · Déposé le {new Date(dossier.document.uploaded_at).toLocaleString('fr-FR')}</p>}
-    <KycPhoto endpoint={`${endpoint}/document`} document={dossier.document} onReady={setPhotoReady} />
+    <h3 className="text-white">Recto / page d’identité</h3><KycPhoto endpoint={`${endpoint}/document`} document={dossier.document} onReady={setPhotoReady} />
+    {dossier.document?.has_back && <><h3 className="text-white">Verso</h3><KycPhoto endpoint={`${endpoint}/document?side=back`} document={dossier.document} onReady={setBackReady} /></>}
     {dossier.document?.review_reason && <p className="text-sm text-slate-250/80">Dernier motif : {dossier.document.review_reason}</p>}
     {status === 'in_review' && <label className="flex gap-3 text-sm text-slate-250/80"><input type="checkbox" checked={checked} onChange={event => setChecked(event.target.checked)} />J’ai contrôlé les informations et la photo du document.</label>}
     {['in_review', 'verified'].includes(status) && <><label className="label-field">Motif (obligatoire pour refuser ou annuler)<textarea maxLength={500} rows={3} className="input-field mt-1" value={reason} onChange={event => setReason(event.target.value)} /></label><div className="flex flex-wrap gap-3">
-      {status === 'in_review' && <><button disabled={busy || !dossier.profile || !dossier.document || !photoReady || !checked} className="btn-primary" onClick={() => review('verified')}>Valider le KYC</button><button disabled={busy || !dossier.document} className="btn-danger" onClick={() => review('rejected')}>Refuser le KYC</button></>}
+      {status === 'in_review' && <><button disabled={busy || !dossier.profile || !dossier.document || !photoReady || (dossier.document?.has_back && !backReady) || !checked} className="btn-primary" onClick={() => review('verified')}>Valider le KYC</button><button disabled={busy || !dossier.document} className="btn-danger" onClick={() => review('rejected')}>Refuser le KYC</button></>}
       <button disabled={busy} className="btn-secondary" onClick={() => review('pending')}>{status === 'verified' ? 'Annuler la validation KYC' : 'Annuler la revue'}</button>
     </div></>}
     {status === 'verified' && <p className="text-sm text-slate-250/70">Annuler la validation bloque l’accès du client aux fonctionnalités soumises au KYC jusqu’à une nouvelle validation.</p>}

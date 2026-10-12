@@ -14,7 +14,7 @@ async function dossier(userId) {
   if (!user) throw fail(404, 'Utilisateur introuvable.');
   const profile = await db.prepare('SELECT * FROM customer_profiles WHERE user_id = ?').get(userId);
   const document = await db.prepare(`SELECT id, document_type, mime_type, byte_size, uploaded_at,
-    review_reason, reviewed_at FROM kyc_documents WHERE user_id = ?`).get(userId);
+    review_reason, reviewed_at, (back_payload_encrypted IS NOT NULL) AS has_back FROM kyc_documents WHERE user_id = ?`).get(userId);
   return { user, profile: profile || null, document: document || null };
 }
 
@@ -39,7 +39,7 @@ async function saveProfile(userId, profile) {
   })();
 }
 
-async function saveDocument(userId, file, documentType) {
+async function normalizePhoto(file) {
   let bytes;
   try {
     const image = sharp(file.buffer, { limitInputPixels: 20_000_000, failOn: 'warning' });
@@ -48,18 +48,26 @@ async function saveDocument(userId, file, documentType) {
     if (metadata.format !== expected || (metadata.pages || 1) !== 1) throw new Error('format');
     bytes = await image.rotate().resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 90 }).toBuffer();
   } catch { throw fail(422, 'Photo invalide : utilisez une image JPEG ou PNG lisible, non animée, de 20 mégapixels maximum.'); }
+  return bytes;
+}
+
+async function saveDocument(userId, file, documentType, backFile) {
+  if (documentType !== 'passport' && !backFile) throw fail(422, 'Ajoutez les photos du recto et du verso.');
+  const bytes = await normalizePhoto(file);
+  const backBytes = documentType !== 'passport' ? await normalizePhoto(backFile) : null;
+  const backEncrypted = backBytes ? encryptDocument(backBytes) : null;
   const encrypted = encryptDocument(bytes);
   const id = randomUUID();
   await db.transaction(async () => {
     const user = await db.prepare('SELECT status_kyc FROM users WHERE id = ? FOR UPDATE').get(userId);
     if (!user) throw fail(404, 'Utilisateur introuvable.');
     if (!['pending', 'rejected'].includes(user.status_kyc)) throw fail(409, 'Le document est verrouillé pendant la revue ou après validation.');
-    await db.prepare(`INSERT INTO kyc_documents (id, user_id, document_type, mime_type, byte_size, payload_encrypted)
-      VALUES (?, ?, ?, 'image/jpeg', ?, ?)
+    await db.prepare(`INSERT INTO kyc_documents (id, user_id, document_type, mime_type, byte_size, payload_encrypted, back_payload_encrypted)
+      VALUES (?, ?, ?, 'image/jpeg', ?, ?, ?)
       ON CONFLICT (user_id) DO UPDATE SET id=EXCLUDED.id, document_type=EXCLUDED.document_type,
-      mime_type=EXCLUDED.mime_type, byte_size=EXCLUDED.byte_size, payload_encrypted=EXCLUDED.payload_encrypted,
+      mime_type=EXCLUDED.mime_type, byte_size=EXCLUDED.byte_size, payload_encrypted=EXCLUDED.payload_encrypted, back_payload_encrypted=EXCLUDED.back_payload_encrypted,
       uploaded_at=CURRENT_TIMESTAMP, review_reason=NULL, reviewed_by=NULL, reviewed_at=NULL`)
-      .run(id, userId, documentType, bytes.length, encrypted);
+      .run(id, userId, documentType, bytes.length + (backBytes?.length || 0), encrypted, backEncrypted);
     await db.prepare("UPDATE users SET status_kyc='pending' WHERE id = ?").run(userId);
     await log(userId, 'kyc_document_upload', userId, id);
   })();
@@ -104,10 +112,13 @@ async function review(userId, actorId, { decision, documentId, reason }) {
   })();
 }
 
-async function readDocument(userId, actorId, download) {
-  const document = await db.prepare('SELECT id, payload_encrypted FROM kyc_documents WHERE user_id = ?').get(userId);
+async function readDocument(userId, actorId, download, side = 'front') {
+  if (!['front', 'back'].includes(side)) throw fail(422, 'Face du document invalide.');
+  const document = await db.prepare('SELECT id, payload_encrypted, back_payload_encrypted FROM kyc_documents WHERE user_id = ?').get(userId);
   if (!document) throw fail(404, 'Aucun document KYC déposé.');
-  const bytes = decryptDocument(document.payload_encrypted);
+  const payload = side === 'back' ? document.back_payload_encrypted : document.payload_encrypted;
+  if (!payload) throw fail(404, 'Aucune photo du verso déposée.');
+  const bytes = decryptDocument(payload);
   await log(actorId, download ? 'kyc_document_download' : 'kyc_document_view', userId, document.id);
   return { id: document.id, bytes };
 }

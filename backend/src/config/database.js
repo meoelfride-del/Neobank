@@ -272,6 +272,8 @@ async function initDatabase() {
   await pool.query('ALTER TABLE sms_outbox ADD COLUMN IF NOT EXISTS provider_device_id TEXT');
   await pool.query('ALTER TABLE sms_outbox ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ');
   await pool.query('INSERT INTO schema_migrations(version) VALUES(6) ON CONFLICT(version) DO NOTHING');
+  await pool.query('ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS back_payload_encrypted TEXT');
+  await pool.query('INSERT INTO schema_migrations(version) VALUES(7) ON CONFLICT(version) DO NOTHING');
 }
 
 async function close() {

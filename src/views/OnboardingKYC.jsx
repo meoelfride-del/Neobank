@@ -12,6 +12,7 @@ export default function OnboardingKYC() {
   const [dossier, setDossier] = useState(null);
   const [profile, setProfile] = useState(emptyProfile);
   const [file, setFile] = useState(null);
+  const [backFile, setBackFile] = useState(null);
   const [type, setType] = useState('identity_card');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -43,8 +44,10 @@ export default function OnboardingKYC() {
   async function upload(event) {
     event.preventDefault();
     if (!file || !['image/jpeg', 'image/png'].includes(file.type) || file.size > 5 * 1024 * 1024) { setError('Choisissez une photo JPEG ou PNG de 5 Mo maximum.'); return; }
+    if (type !== 'passport' && (!backFile || !['image/jpeg', 'image/png'].includes(backFile.type) || backFile.size > 5 * 1024 * 1024)) { setError('Ajoutez une photo du verso JPEG ou PNG de 5 Mo maximum.'); return; }
     const data = new FormData(); data.append('document_type', type); data.append('document', file);
-    await action(() => api.post('/accounts/kyc/document', data, { headers: { 'Content-Type': undefined } }), 'Photo enregistrée. Soumettez maintenant votre dossier.');
+    if (type !== 'passport') data.append('document_back', backFile);
+    await action(() => api.post('/accounts/kyc/document', data, { headers: { 'Content-Type': undefined } }), 'Photos enregistrées. Soumettez maintenant votre dossier.');
   }
   const editable = ['pending', 'rejected'].includes(status);
   const profileChanged = dossier?.profile && Object.keys(emptyProfile).some(key => (profile[key] || '') !== (dossier.profile[key] || ''));
@@ -55,8 +58,8 @@ export default function OnboardingKYC() {
     {dossier && <p className="text-white" aria-live="polite">Statut : {({ pending: 'À compléter', in_review: 'En cours de vérification', rejected: 'Refusé', verified: 'Validé' })[status]}</p>}
     {dossier?.document?.review_reason && <p className="rounded-xl bg-white/5 p-4 text-slate-250/80">Motif de l’administrateur : {dossier.document.review_reason}</p>}
     {editable && <form onSubmit={event => { event.preventDefault(); const payload = Object.fromEntries(Object.keys(emptyProfile).map(key => [key, profile[key] || ''])); action(() => api.put('/accounts/kyc/profile', payload), 'Informations enregistrées.', true); }} className="space-y-4"><h2 className="text-white font-semibold">Vos informations personnelles</h2><KycProfileFields value={profile} onChange={(field, value) => setProfile(current => ({ ...current, [field]: value }))} /><button disabled={busy} className="btn-secondary">Enregistrer les informations</button></form>}
-    {editable && <form onSubmit={upload} className="space-y-4"><h2 className="text-white font-semibold">Photo de votre document</h2><label className="label-field">Type de document<select className="input-field mt-1" value={type} onChange={event => setType(event.target.value)}><option value="identity_card">Carte d’identité</option><option value="passport">Passeport</option><option value="residence_permit">Titre de séjour</option></select></label><label className="label-field">Photo JPEG ou PNG, 5 Mo et 20 mégapixels maximum<input required type="file" accept="image/jpeg,image/png" className="input-field mt-1" onChange={event => setFile(event.target.files[0] || null)} /></label><p className="text-sm text-slate-250/70">Le document doit être complet, net et sans reflet. Une nouvelle photo remplace la précédente.</p><button disabled={busy || !file} className="btn-secondary">{busy ? 'Enregistrement…' : dossier?.document ? 'Remplacer la photo' : 'Enregistrer la photo'}</button></form>}
-    {dossier?.document && <KycPhoto endpoint="/accounts/kyc/document" document={dossier.document} />}
+    {editable && <form onSubmit={upload} className="space-y-4"><h2 className="text-white font-semibold">Photo de votre document</h2><label className="label-field">Type de document<select className="input-field mt-1" value={type} onChange={event => setType(event.target.value)}><option value="identity_card">Carte d’identité</option><option value="passport">Passeport</option><option value="residence_permit">Titre de séjour</option></select></label><label className="label-field">{type === 'passport' ? 'Page d’identité du passeport' : 'Recto du document'} · JPEG ou PNG, 5 Mo maximum<input required type="file" accept="image/jpeg,image/png" className="input-field mt-1" onChange={event => setFile(event.target.files[0] || null)} /></label>{type !== 'passport' && <label className="label-field">Verso du document · JPEG ou PNG, 5 Mo maximum<input required type="file" accept="image/jpeg,image/png" className="input-field mt-1" onChange={event => setBackFile(event.target.files[0] || null)} /></label>}<p className="text-sm text-slate-250/70">Le document doit être complet, net et sans reflet. Un nouveau dépôt remplace les photos précédentes. Chaque photo est limitée à 20 mégapixels.</p><button disabled={busy || !file || (type !== 'passport' && !backFile)} className="btn-secondary">{busy ? 'Enregistrement…' : dossier?.document ? 'Remplacer les photos' : 'Enregistrer les photos'}</button></form>}
+    {dossier?.document && <><h2 className="text-white">Recto / page d’identité</h2><KycPhoto endpoint="/accounts/kyc/document" document={dossier.document} />{dossier.document.has_back && <><h2 className="text-white">Verso</h2><KycPhoto endpoint="/accounts/kyc/document?side=back" document={dossier.document} /></>}</>}
     {profileChanged && <p className="text-sm text-gold-400">Enregistrez vos informations modifiées avant de soumettre votre dossier.</p>}
     {status === 'pending' && <button disabled={busy || !dossier.profile || !dossier.document || profileChanged} onClick={() => action(() => api.post('/accounts/kyc/submit'), 'Dossier transmis pour vérification.')} className="btn-primary w-full">Soumettre mon dossier KYC</button>}
     {status === 'rejected' && <p className="text-sm text-slate-250/70">Corrigez vos informations et remplacez votre photo avant de soumettre à nouveau votre dossier.</p>}

@@ -19,7 +19,7 @@ async function user(status = 'pending') {
   if (status === 'pending') {
     await saveProfile(id, { birth_date: '1990-01-01', birth_place: 'Ville Test', nationality: 'Test', address_line: '12 rue Test', city: 'Ville Test', country: 'Pays Test', postal_code: '', occupation: '' });
     const buffer = await require('sharp')({ create: { width: 20, height: 20, channels: 3, background: '#123456' } }).jpeg().toBuffer();
-    await saveDocument(id, { buffer, mimetype: 'image/jpeg' }, 'identity_card');
+    await saveDocument(id, { buffer, mimetype: 'image/jpeg' }, 'identity_card', { buffer, mimetype: 'image/jpeg' });
   }
   return id;
 }

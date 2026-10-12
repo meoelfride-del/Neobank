@@ -29,7 +29,7 @@ let recipient;
 const syntheticProfile = { birth_date: '1990-01-01', birth_place: 'Ville Test', nationality: 'Test', address_line: '12 rue Test', city: 'Ville Test', country: 'Pays Test', postal_code: '', occupation: '' };
 async function uploadPhoto(token) {
   const bytes = await require('sharp')({ create: { width: 20, height: 20, channels: 3, background: '#123456' } }).jpeg().toBuffer();
-  const form = new FormData(); form.append('document_type', 'identity_card'); form.append('document', new Blob([bytes], { type: 'image/jpeg' }), 'synthetic.jpg');
+  const form = new FormData(); form.append('document_type', 'identity_card'); form.append('document', new Blob([bytes], { type: 'image/jpeg' }), 'synthetic.jpg'); form.append('document_back', new Blob([bytes], { type: 'image/jpeg' }), 'back.jpg');
   const response = await fetch(BASE_URL + '/accounts/kyc/document', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
   const data = await response.json(); assert.equal(response.status, 201, JSON.stringify(data)); return data.documentId;
 }

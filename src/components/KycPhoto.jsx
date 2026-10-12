@@ -12,7 +12,7 @@ export default function KycPhoto({ endpoint, document, onReady }) {
   }, [endpoint, document?.id, onReady]);
   async function download() {
     setBusy(true); setError('');
-    try { const { data } = await api.get(`${endpoint}?download=true`, { responseType: 'blob' }); const objectUrl = URL.createObjectURL(data); const anchor = window.document.createElement('a'); anchor.href = objectUrl; anchor.download = `kyc-${document.id}.jpg`; window.document.body.appendChild(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(objectUrl), 1000); }
+    try { const { data } = await api.get(`${endpoint}${endpoint.includes('?') ? '&' : '?'}download=true`, { responseType: 'blob' }); const objectUrl = URL.createObjectURL(data); const anchor = window.document.createElement('a'); anchor.href = objectUrl; anchor.download = `kyc-${document.id}-${endpoint.includes('side=back') ? 'verso' : 'recto'}.jpg`; window.document.body.appendChild(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(objectUrl), 1000); }
     catch { setError('Téléchargement impossible. Réessayez.'); } finally { setBusy(false); }
   }
   if (!document) return <p>Aucune photo déposée.</p>;

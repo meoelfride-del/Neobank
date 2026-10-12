@@ -18,6 +18,7 @@ async function json(route, token, method = 'GET', body) {
 }
 async function upload(token, bytes = image, mime = 'image/jpeg', extra = false) {
   const form = new FormData(); form.append('document_type', 'identity_card'); form.append('document', new Blob([bytes], { type: mime }), 'synthetic.jpg');
+  form.append('document_back', new Blob([bytes], { type: mime }), 'back.jpg');
   if (extra) form.append('unexpected', 'value');
   const response = await fetch(base + '/accounts/kyc/document', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
   return { status: response.status, body: await response.json() };
@@ -140,4 +141,32 @@ test('anciens comptes validés sans document : annulation et complément du doss
   const oldId = (await json('/accounts/kyc/status', token)).body.document.id;
   assert.equal((await json(`/admin/users/${id}`, admin, 'PATCH', { nom: 'Test', prenom: 'Corrigé', email: 'legacy@example.test', phone: '+22900000007' })).status, 200);
   assert.equal((await json(`/admin/kyc/${id}`, admin, 'POST', { decision: 'verified', documentId: oldId })).status, 409);
+});
+
+ test('recto et verso distincts, obligatoires pour une carte, passeport sur une seule face', async () => {
+  const account = await createClient(8);
+  const back = await sharp({ create: { width: 19, height: 17, channels: 3, background: '#abcdef' } }).png().toBuffer();
+  async function send(type, front, reverse) {
+    const form = new FormData(); form.append('document_type', type);
+    if (front) form.append('document', new Blob([image], { type: 'image/jpeg' }), 'front.jpg');
+    if (reverse) form.append('document_back', new Blob([back], { type: 'image/png' }), 'back.png');
+    return fetch(base + '/accounts/kyc/document', { method: 'POST', headers: { Authorization: 'Bearer ' + account.token }, body: form });
+  }
+  assert.equal((await send('identity_card', true, false)).status, 422);
+  assert.equal((await send('identity_card', false, true)).status, 422);
+  assert.equal((await send('identity_card', true, true)).status, 201);
+  assert.equal((await json('/accounts/kyc/status', account.token)).body.document.has_back, true);
+  const stored = await db.prepare('SELECT payload_encrypted, back_payload_encrypted FROM kyc_documents WHERE user_id=?').get(account.id);
+  assert.match(stored.back_payload_encrypted, /^v1\./);
+  assert.notEqual(stored.payload_encrypted, stored.back_payload_encrypted);
+  for (const side of ['front', 'back']) {
+    const response = await fetch(base + '/accounts/kyc/document?side=' + side + '&download=true', { headers: { Authorization: 'Bearer ' + account.token } });
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-disposition'), new RegExp(side === 'back' ? 'verso' : 'recto'));
+    const metadata = await sharp(Buffer.from(await response.arrayBuffer())).metadata();
+    assert.equal(metadata.width, side === 'back' ? 19 : 32);
+  }
+  assert.equal((await send('passport', true, false)).status, 201);
+  assert.equal((await json('/accounts/kyc/status', account.token)).body.document.has_back, false);
+  assert.equal((await fetch(base + '/accounts/kyc/document?side=back', { headers: { Authorization: 'Bearer ' + account.token } })).status, 404);
 });
